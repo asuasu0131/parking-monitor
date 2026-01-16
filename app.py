@@ -42,10 +42,14 @@ def static_files(filename):
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
-    with open("parking_layout.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    socketio.emit("update_layout", data, broadcast=True)
-    return {"status": "ok"}
+    try:
+        with open("parking_layout.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        socketio.emit("update_layout", data, broadcast=True)
+        return {"status": "ok"}
+    except Exception as e:
+        print("保存エラー:", e)
+        return {"status":"error", "message": str(e)}, 500
 
 # JSON取得
 @app.route("/parking_layout.json")
