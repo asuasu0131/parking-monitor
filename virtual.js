@@ -33,10 +33,12 @@ function renderRods(){
 
 // ===== ズーム（containerのみ）=====
 zoomSlider.addEventListener("input", ()=>{
-  zoomScale = parseFloat(zoomSlider.value);
-  container.style.transform = `scale(${zoomScale})`;
-  container.style.transformOrigin = "center center";
+    zoomScale = parseFloat(zoomSlider.value);
 });
+
+// メインループ内
+container.style.transform =
+  `scale(${zoomScale}) rotate(${deviceHeading!=null?-deviceHeading:0}deg)`;
 
 // ===== GPS → 相対座標 =====
 function gpsToRelative(lat,lng){

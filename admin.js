@@ -61,10 +61,10 @@ function renderRods(){
 renderRods();
 
 // ===== ズーム（containerのみ）=====
+// ズーム
 zoomSlider.addEventListener("input", ()=>{
-  zoomScale = parseFloat(zoomSlider.value);
-  container.style.transform = `scale(${zoomScale})`;
-  container.style.transformOrigin = "center center";
+    zoomScale = parseFloat(zoomSlider.value);
+    container.style.transform = `scale(${zoomScale})`;
 });
 
 // ===== ロッド追加 =====
