@@ -1,9 +1,8 @@
-from flask import Flask, request, send_file, send_from_directory
+from flask import Flask, request, send_file, send_from_directory, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import os
 import json
-import tempfile
 
 app = Flask(__name__)
 CORS(app)
@@ -32,7 +31,7 @@ def virtual():
 def admin():
     return send_from_directory(".", "admin.html")
 
-# ===== CSS / JS / JSON ファイル =====
+# ===== CSS / JS / JSON =====
 @app.route("/<filename>")
 def static_files(filename):
     if filename.endswith((".css", ".js", ".json")):
@@ -43,38 +42,37 @@ def static_files(filename):
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
+    file_path = "/tmp/parking_layout.json"  # Renderでも書き込み可能
     try:
-        # Render 環境でも書き込める /tmp フォルダに保存
-        tmp_path = os.path.join(tempfile.gettempdir(), "parking_layout.json")
-        with open(tmp_path, "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        # virtual.html に即時反映
-        socketio.emit("update_layout", data, broadcast=True)
-        return {"status": "ok"}
-    except Exception as e:
-        print("保存エラー:", e)
-        return {"status":"error", "message": str(e)}, 500
+        print(f"[INFO] Saved layout to {file_path}")
 
-# ===== JSON取得 =====
+        # virtual.html に即時通知（全クライアントに送信）
+        socketio.start_background_task(lambda: socketio.emit("update_layout", data))
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"[ERROR] Failed to save layout: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# JSON取得
 @app.route("/parking_layout.json")
 def get_layout():
-    try:
-        tmp_path = os.path.join(tempfile.gettempdir(), "parking_layout.json")
-        # ファイルがまだ存在しない場合は初期データを返す
-        if not os.path.exists(tmp_path):
-            initial_data = [
-                {"id":"A1","x":None,"y":None,"status":0},
-                {"id":"A2","x":None,"y":None,"status":1},
-                {"id":"A3","x":None,"y":None,"status":0},
-                {"id":"B1","x":None,"y":None,"status":0},
-                {"id":"B2","x":None,"y":None,"status":1},
-                {"id":"B3","x":None,"y":None,"status":0}
-            ]
-            return json.dumps(initial_data), 200, {"Content-Type":"application/json"}
-        return send_file(tmp_path)
-    except Exception as e:
-        print("取得エラー:", e)
-        return {"status":"error", "message": str(e)}, 500
+    file_path = "/tmp/parking_layout.json"
+    if not os.path.exists(file_path):
+        # 初回用にデフォルトを作成
+        default_layout = [
+            {"id":"A1","x":None,"y":None,"status":0},
+            {"id":"A2","x":None,"y":None,"status":1},
+            {"id":"A3","x":None,"y":None,"status":0},
+            {"id":"B1","x":None,"y":None,"status":0},
+            {"id":"B2","x":None,"y":None,"status":1},
+            {"id":"B3","x":None,"y":None,"status":0}
+        ]
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(default_layout, f, ensure_ascii=False, indent=2)
+    return send_file(file_path)
 
 # ===== Render 用ポート =====
 if __name__ == "__main__":
