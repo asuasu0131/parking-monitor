@@ -44,6 +44,7 @@ def save_layout():
     data = request.get_json()
     with open("parking_layout.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    socketio.emit("update_layout", data, broadcast=True)
     return {"status": "ok"}
 
 # JSON取得
