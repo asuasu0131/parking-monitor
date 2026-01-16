@@ -61,18 +61,22 @@ renderRods();
 };
 
 document.getElementById("save-layout").onclick = async ()=>{
-const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
-try{
-const res = await fetch("/save_layout", {
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify(saveData)
-});
-if(res.ok) alert("parking_layout.json に保存しました");
-else alert("保存に失敗しました");
-} catch(err){
-alert("通信エラー："+err);
-}
+    const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
+    try{
+        const res = await fetch("/save_layout", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify(saveData)
+        });
+        const result = await res.json();
+        if(res.ok && result.status==="ok"){
+            alert("parking_layout.json に保存しました");
+        } else {
+            alert("保存に失敗しました\n"+(result.message||""));
+        }
+    } catch(err){
+        alert("通信エラー："+err);
+    }
 };
 
 (function loop(){

@@ -29,6 +29,25 @@ const dy = (userLat - lat) / (MAX_LAT-MIN_LAT) * lot.clientHeight;
 return {x: dx, y: dy};
 }
 
+// JSONから初期レイアウト取得
+async function fetchLayout(){
+    try {
+        const res = await fetch("/parking_layout.json");
+        const data = await res.json();
+        rods = data;      // 管理者が保存したレイアウトを反映
+        renderRods();
+    } catch(err){
+        console.error(err);
+    }
+}
+fetchLayout();
+
+// Socket.IO: 管理者が保存したロッド更新を反映
+socket.on("update_layout", data=>{
+    rods = data;
+    renderRods();
+});
+
 // Socket.IO: 管理者が保存したロッド更新を反映
 socket.on("update_layout", data=>{
     rods = data;
