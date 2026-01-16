@@ -48,15 +48,15 @@ def save_layout():
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"[INFO] Saved layout to {file_path}")
 
-        # virtual.html に即時通知（全クライアントに送信）
-        socketio.start_background_task(lambda: socketio.emit("update_layout", data))
+        # 全クライアントに即時通知
+        socketio.emit("update_layout", data, broadcast=True)
 
         return jsonify({"status": "ok"})
     except Exception as e:
         print(f"[ERROR] Failed to save layout: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# JSON取得
+# ===== JSON取得 =====
 @app.route("/parking_layout.json")
 def get_layout():
     file_path = "/tmp/parking_layout.json"
