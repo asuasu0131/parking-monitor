@@ -1,0 +1,19 @@
+body { font-family:sans-serif; background:#cfcfcf; padding:8px; margin:0; text-align:center; }
+h1 { font-size:clamp(18px,4vw,26px); margin:6px 0; }
+button { padding:6px 10px; margin:2px; font-size:14px; }
+#parking-lot-container {
+  position:relative; width:100%; max-width:900px; aspect-ratio:9/6.5;
+  margin:auto; overflow:hidden; border-radius:10px; background:#bfbfbf; cursor:crosshair;
+}
+#parking-lot { position:absolute; width:100%; height:100%; top:0; left:0; transform-origin:center center; }
+.rod {
+  position:absolute; width:33.33%; height:22%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:white; font-weight:bold; font-size:clamp(14px,3.5vw,24px);
+  border-top:3px solid white; border-bottom:3px solid white;
+  cursor:move; user-select:none;
+}
+.empty { background:#4caf50; }
+.full  { background:#f44336; }
+#controls { margin:10px 0; }
+#zoom-slider { width:80%; margin:10px auto; }
