@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, send_from_directory, jsonify
+from flask import Flask, request, send_file, send_from_directory, render_template
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import os
@@ -31,7 +31,7 @@ def virtual():
 def admin():
     return send_from_directory(".", "admin.html")
 
-# ===== CSS / JS / JSON =====
+# ===== CSS / JS ファイル =====
 @app.route("/<filename>")
 def static_files(filename):
     if filename.endswith((".css", ".js", ".json")):
@@ -42,40 +42,16 @@ def static_files(filename):
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
-    file_path = "/tmp/parking_layout.json"  # Renderでも書き込み可能
-    try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        print(f"[INFO] Saved layout to {file_path}")
+    with open("parking_layout.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return {"status": "ok"}
 
-        # 全クライアントに即時通知
-        socketio.emit("update_layout", data, broadcast=True)
-
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        print(f"[ERROR] Failed to save layout: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# ===== JSON取得 =====
+# JSON取得
 @app.route("/parking_layout.json")
 def get_layout():
-    file_path = "/tmp/parking_layout.json"
-    if not os.path.exists(file_path):
-        # 初回用にデフォルトを作成
-        default_layout = [
-            {"id":"A1","x":None,"y":None,"status":0},
-            {"id":"A2","x":None,"y":None,"status":1},
-            {"id":"A3","x":None,"y":None,"status":0},
-            {"id":"B1","x":None,"y":None,"status":0},
-            {"id":"B2","x":None,"y":None,"status":1},
-            {"id":"B3","x":None,"y":None,"status":0}
-        ]
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(default_layout, f, ensure_ascii=False, indent=2)
-    return send_file(file_path)
+    return send_file("parking_layout.json")
 
 # ===== Render 用ポート =====
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"Starting server on 0.0.0.0:{port}")
-    socketio.run(app, host="0.0.0.0", port=port)
