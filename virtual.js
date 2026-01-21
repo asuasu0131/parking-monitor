@@ -4,17 +4,20 @@ const userMarker = document.getElementById("user-marker");
 const headingArrow = document.getElementById("heading-arrow");
 
 // ===== 設定 =====
+const colWidth = 70;  // ロッド幅
+const rowHeight = 50;
 const rowCount = 9;
-const colWidth = 70;   // ロッド幅
-const rowHeight = 50;  // ロッド高さ
-const colGap = 40;     // 通路幅
 
-// 列のX座標を順番に計算（1列 / 通路 / 2列 / 通路 / 1列）
-const x1 = 0;
-const x2 = x1 + colWidth + colGap;      // 2列目左
-const x3 = x2 + colWidth;              // 2列目右
-const x4 = x3 + colGap;                // 4列目
-const colX = [x1, x2, x3, x4];
+// 列幅はすべて同じ colWidth
+// 列順: 1列目 / 通路 / 2列目左 / 2列目右 / 通路 / 4列目
+const colX = [
+  0,                 // 1列目
+  colWidth,           // 通路
+  colWidth*2,         // 2列目左
+  colWidth*3,         // 2列目右
+  colWidth*4,         // 通路
+  colWidth*5          // 4列目
+];
 
 // ===== 仮ロッド配置 =====
 const rods = [];
