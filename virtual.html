@@ -212,6 +212,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     ctx.stroke();
   }
 
+  // ===== ユーザー操作 =====
   window.addEventListener("keydown",e=>{
     if(e.key==="ArrowUp"){ user.y-=moveStep; needsUpdate=true; }
     if(e.key==="ArrowDown"){ user.y+=moveStep; needsUpdate=true; }
@@ -219,6 +220,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     if(e.key==="ArrowRight"){ user.x+=moveStep; needsUpdate=true; }
   });
 
+  // ===== メインループ =====
   function loop(){
     if(needsUpdate){
       const s=nearestNode();
@@ -240,6 +242,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+
 });
 </script>
 
