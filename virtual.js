@@ -4,11 +4,11 @@ const userMarker = document.getElementById("user-marker");
 const headingArrow = document.getElementById("heading-arrow");
 
 // ===== 設定 =====
-const colWidth = 70;  // ロッド幅
-const rowHeight = 50;
 const rowCount = 9;
+const colWidth = 70;    // ロッド幅（通路も同じ幅）
+const rowHeight = 50;
 
-// 列幅はすべて同じ colWidth
+// 列幅はすべて colWidth で統一
 // 列順: 1列目 / 通路 / 2列目左 / 2列目右 / 通路 / 4列目
 const colX = [
   0,                 // 1列目
@@ -19,41 +19,43 @@ const colX = [
   colWidth*5          // 4列目
 ];
 
-// ===== 仮ロッド配置 =====
+// ===== ロッド配置 =====
 const rods = [];
-for (let r = 0; r < rowCount; r++) {
+for (let r=0; r<rowCount; r++){
   rods.push({id:`A${r+1}`, x: colX[0], y: r*rowHeight, status:0});
-  rods.push({id:`B${r+1}`, x: colX[1], y: r*rowHeight, status:0});
-  rods.push({id:`C${r+1}`, x: colX[2], y: r*rowHeight, status:0});
-  rods.push({id:`D${r+1}`, x: colX[3], y: r*rowHeight, status:0});
+  rods.push({id:`B${r+1}`, x: colX[2], y: r*rowHeight, status:0});
+  rods.push({id:`C${r+1}`, x: colX[3], y: r*rowHeight, status:0});
+  rods.push({id:`D${r+1}`, x: colX[5], y: r*rowHeight, status:0});
 }
 
 // ===== ユーザー初期位置（画面下中央） =====
 let user = {x: container.clientWidth/2, y: container.clientHeight - 30};
 
-// ===== ロッド描画（初回のみ） =====
+// ===== ロッド描画 =====
 function initRods() {
   rods.forEach(r => {
     const d = document.createElement("div");
-    d.className = "rod " + (r.status === 0 ? "empty" : "full");
+    d.className = "rod " + (r.status===0 ? "empty" : "full");
     d.style.left = r.x + "px";
     d.style.top = r.y + "px";
+    d.style.width = colWidth + "px";
+    d.style.height = rowHeight + "px";
     d.innerHTML = r.id;
     lot.appendChild(d);
     r.element = d;
 
     // クリックで空/満切替
     d.onclick = () => {
-      r.status = r.status === 0 ? 1 : 0;
-      d.className = "rod " + (r.status === 0 ? "empty" : "full");
+      r.status = r.status===0 ? 1 : 0;
+      d.className = "rod " + (r.status===0 ? "empty" : "full");
     };
   });
 }
 
 // ===== 最寄り空きロッド取得 =====
 function nearestRod() {
-  const emptyRods = rods.filter(r => r.status === 0);
-  if (emptyRods.length === 0) return null;
+  const emptyRods = rods.filter(r => r.status===0);
+  if (emptyRods.length===0) return null;
 
   let nearest = emptyRods[0];
   let minDist = Math.hypot(user.x - nearest.x, user.y - nearest.y);
@@ -93,13 +95,13 @@ function moveDown() { user.y += moveStep; }
 function moveLeft() { user.x -= moveStep; }
 function moveRight() { user.x += moveStep; }
 
-// ボタンイベント
+// ===== ボタンイベント =====
 document.getElementById("up").onclick = moveUp;
 document.getElementById("down").onclick = moveDown;
 document.getElementById("left").onclick = moveLeft;
 document.getElementById("right").onclick = moveRight;
 
-// キーボード矢印キーも有効
+// ===== キーボード矢印キーも有効 =====
 window.addEventListener("keydown", e => {
   switch(e.key){
     case "ArrowUp": moveUp(); break;
@@ -111,7 +113,7 @@ window.addEventListener("keydown", e => {
 
 // ===== メインループ =====
 initRods();
-(function loop() {
+(function loop(){
   updateArrow();
   requestAnimationFrame(loop);
 })();
