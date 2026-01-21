@@ -11,7 +11,14 @@ const rowHeight = 50;
 const colGap = 40; // 通路幅
 
 // 列配置: 1列 / 通路 / 2列 / 通路 / 1列
-const colX = [0, 0, 70+colGap, 70+colGap+70, 70+colGap+70+70+colGap, 70+colGap+70+70+colGap+70];
+const colX = [
+  0,                   // 1列目
+  0,                   // 通路 placeholder
+  colWidth + colGap,    // 2列目左
+  colWidth*2 + colGap,  // 2列目右
+  colWidth*2 + colGap + colWidth + colGap, // 通路 placeholder
+  colWidth*3 + colGap*2 + colWidth // 4列目
+];
 
 for (let r = 0; r < rowCount; r++) {
   rods.push({id:`A${r+1}`, x: colX[0], y: r*rowHeight, status:0});
@@ -21,11 +28,10 @@ for (let r = 0; r < rowCount; r++) {
 }
 
 // ===== ユーザー初期位置（画面下中央） =====
-let user = {x: container.clientWidth/2, y: container.clientHeight-10};
+let user = {x: container.clientWidth/2, y: container.clientHeight-30};
 
-// ===== ロッド描画 =====
-function renderRods(){
-  document.querySelectorAll(".rod").forEach(e=>e.remove());
+// ===== ロッド描画（初回のみ） =====
+function initRods(){
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className="rod "+(r.status===0?"empty":"full");
@@ -41,7 +47,7 @@ function renderRods(){
   });
 }
 
-// ===== 最短ロッドへの方向計算 =====
+// ===== 最寄り空きロッド取得 =====
 function nearestRod(){
   const emptyRods = rods.filter(r=>r.status===0);
   if(emptyRods.length===0) return null;
@@ -57,13 +63,13 @@ function nearestRod(){
   return nearest;
 }
 
-// ===== 矢印更新 =====
+// ===== 赤矢印更新 =====
 function updateArrow(){
   const target = nearestRod();
   if(!target) return;
   const dx = target.x - user.x;
   const dy = target.y - user.y;
-  const angle = Math.atan2(dy,dx)*180/Math.PI;
+  const angle = Math.atan2(dy, dx)*180/Math.PI;
   headingArrow.style.left = user.x+"px";
   headingArrow.style.top = user.y+"px";
   headingArrow.style.transform = `translate(-50%,-100%) rotate(${angle}deg)`;
@@ -72,20 +78,31 @@ function updateArrow(){
   userMarker.style.top = user.y+"px";
 }
 
-// ===== 矢印キーで移動 =====
+// ===== 移動 =====
 const moveStep = 5;
+function moveUp(){ user.y -= moveStep; }
+function moveDown(){ user.y += moveStep; }
+function moveLeft(){ user.x -= moveStep; }
+function moveRight(){ user.x += moveStep; }
+
+document.getElementById("up").onclick = moveUp;
+document.getElementById("down").onclick = moveDown;
+document.getElementById("left").onclick = moveLeft;
+document.getElementById("right").onclick = moveRight;
+
+// キーボードも有効
 window.addEventListener("keydown", e=>{
   switch(e.key){
-    case "ArrowUp": user.y-=moveStep; break;
-    case "ArrowDown": user.y+=moveStep; break;
-    case "ArrowLeft": user.x-=moveStep; break;
-    case "ArrowRight": user.x+=moveStep; break;
+    case "ArrowUp": moveUp(); break;
+    case "ArrowDown": moveDown(); break;
+    case "ArrowLeft": moveLeft(); break;
+    case "ArrowRight": moveRight(); break;
   }
 });
 
 // ===== ループ =====
+initRods();
 (function loop(){
-  renderRods();
   updateArrow();
   requestAnimationFrame(loop);
 })();
