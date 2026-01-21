@@ -48,20 +48,28 @@ function resizeCanvas() {
   const rect = container.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
-  offsetX = (rect.width - colWidth * colCount) / 2;
-  offsetY = (rect.height - rowHeight * rowCount) / 2;
 
+  // 上下に通路スペースを追加（rowHeightの1/2ずつ）
+  const verticalPadding = rowHeight; // 上下1行分の余白
+  offsetX = (rect.width - colWidth * colCount) / 2;
+  offsetY = verticalPadding;
+
+  // ユーザー初期位置は下中央（入口）
   if (!user.x && !user.y) {
     user.x = rect.width / 2;
-    user.y = rect.height - 30; // 入口下
+    user.y = rect.height - 30;
   }
 
+  // ロッド位置
   rods.forEach(r => {
     r.canvasX = offsetX + r.col * colWidth + colWidth / 2;
     r.canvasY = offsetY + r.row * rowHeight + rowHeight / 2;
-    r.element.style.left = (r.canvasX - colWidth/2) + "px";
-    r.element.style.top  = (r.canvasY - rowHeight/2) + "px";
+    r.element.style.left = (r.canvasX - colWidth / 2) + "px";
+    r.element.style.top = (r.canvasY - rowHeight / 2) + "px";
   });
+
+  // 通路ノードも更新
+  updateNodePositions();
 }
 window.addEventListener("resize", resizeCanvas);
 
