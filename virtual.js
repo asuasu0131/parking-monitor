@@ -28,6 +28,14 @@ for (let r=0; r<rowCount; r++){
   rods.push({id:`D${r+1}`, x: colX[5], y: r*rowHeight, status:0});
 }
 
+// ===== 駐車場全体サイズ & 中央オフセット =====
+const totalCols = colX.length; // 6列
+const totalRows = rowCount;
+const parkingWidth = colWidth * totalCols;
+const parkingHeight = rowHeight * totalRows;
+const offsetX = (container.clientWidth - parkingWidth) / 2;
+const offsetY = (container.clientHeight - parkingHeight) / 2;
+
 // ===== ユーザー初期位置（画面下中央） =====
 let user = {x: container.clientWidth/2, y: container.clientHeight - 30};
 
@@ -36,10 +44,10 @@ function initRods() {
   rods.forEach(r => {
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0 ? "empty" : "full");
-    d.style.left = r.x + "px";
-    d.style.top = r.y + "px";
     d.style.width = colWidth + "px";
     d.style.height = rowHeight + "px";
+    d.style.left = (r.x + offsetX) + "px";
+    d.style.top  = (r.y + offsetY) + "px";
     d.innerHTML = r.id;
     lot.appendChild(d);
     r.element = d;
@@ -58,10 +66,10 @@ function nearestRod() {
   if (emptyRods.length===0) return null;
 
   let nearest = emptyRods[0];
-  let minDist = Math.hypot(user.x - nearest.x, user.y - nearest.y);
+  let minDist = Math.hypot(user.x - (nearest.x+offsetX), user.y - (nearest.y+offsetY));
 
   emptyRods.forEach(r => {
-    const dist = Math.hypot(user.x - r.x, user.y - r.y);
+    const dist = Math.hypot(user.x - (r.x+offsetX), user.y - (r.y+offsetY));
     if (dist < minDist) {
       nearest = r;
       minDist = dist;
@@ -76,8 +84,10 @@ function updateArrow() {
   const target = nearestRod();
   if (!target) return;
 
-  const dx = target.x - user.x;
-  const dy = target.y - user.y;
+  const targetX = target.x + offsetX + colWidth/2;
+  const targetY = target.y + offsetY + rowHeight/2;
+  const dx = targetX - user.x;
+  const dy = targetY - user.y;
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
   headingArrow.style.left = user.x + "px";
