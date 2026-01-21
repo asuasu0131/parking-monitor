@@ -11,6 +11,7 @@ const rowH = 50;
 const padRows = 1;
 
 let user = { x:0, y:0 };
+let needsUpdate = true;
 
 // ===== ロッド =====
 const rods=[];
@@ -28,15 +29,15 @@ rods.forEach(r=>{
   d.onclick=()=>{
     r.status^=1;
     d.className="rod "+(r.status?"full":"empty");
+    needsUpdate = true; // 状態変化で経路再計算
   };
   lot.appendChild(d);
   r.el=d;
 });
 
-// ===== ノード（Mapで一意化）=====
+// ===== ノード =====
 const nodeMap=new Map();
 function key(r,c){return `${r},${c}`;}
-
 function getNode(r,c){
   const k=key(r,c);
   if(!nodeMap.has(k)){
@@ -44,15 +45,11 @@ function getNode(r,c){
   }
   return nodeMap.get(k);
 }
-
-// 通路
 for(let r=0;r<rowCount+padRows*2;r++){
   for(let c=0;c<colCount;c++){
     if(![0,2,3,5].includes(c)) getNode(r,c);
   }
 }
-
-// ロッド前ノード（通路を流用）
 rods.forEach(r=>{
   const nr=r.row+padRows;
   const nc=(r.col<=2)?1:4;
@@ -61,7 +58,8 @@ rods.forEach(r=>{
   r.front=n;
 });
 
-// 隣接
+const entryNodes=[getNode(0,1), getNode(0,4)];
+
 nodeMap.forEach(n=>{
   [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
     const nb=nodeMap.get(key(n.row+dr,n.col+dc));
@@ -101,27 +99,43 @@ window.addEventListener("resize",resize);
 function h(a,b){return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
 function astar(s,g){
   const open=[s],came=new Map(),gScore=new Map([[s,0]]);
+  const visited=new Set();
   while(open.length){
-    open.sort((a,b)=>(gScore.get(a)+h(a,g))-(gScore.get(b)+h(b,g)));
-    const cur=open.shift();
-    if(cur===g){
-      const p=[]; let c=cur;
-      while(c){p.unshift(c);c=came.get(c);}
-      return p;
+    // 軽量化: openから最小コストを線形探索
+    let minIdx=0, minScore=gScore.get(open[0])+h(open[0],g);
+    for(let i=1;i<open.length;i++){
+      const score=gScore.get(open[i])+h(open[i],g);
+      if(score<minScore){ minScore=score; minIdx=i; }
     }
-    cur.neighbors.forEach(n=>{
-      const t=gScore.get(cur)+1;
+    const cur=open.splice(minIdx,1)[0];
+    if(cur===g){
+      const path=[]; let c=cur;
+      while(c){ path.unshift(c); c=came.get(c); }
+      return path;
+    }
+    visited.add(cur);
+    for(const n of cur.neighbors){
+      if(visited.has(n)) continue;
+      const t=(gScore.get(cur)||0)+1;
       if(t<(gScore.get(n)||1e9)){
         came.set(n,cur);
         gScore.set(n,t);
         if(!open.includes(n)) open.push(n);
       }
-    });
+    }
   }
   return [];
 }
 
 // ===== 経路 =====
+let path=[];
+function updatePath(){
+  const s = nearestNode();
+  const g = goalNode();
+  if(g) path = astar(s,g);
+  else path=[];
+}
+
 function nearestNode(){
   return nodes.reduce((a,b)=>
     Math.hypot(b.x-user.x,b.y-user.y)<
@@ -136,33 +150,34 @@ function goalNode(){
 }
 
 // ===== 描画 =====
-function draw(p){
+function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!p.length) return;
+  if(!path.length) return;
   ctx.strokeStyle="blue";
   ctx.lineWidth=4;
   ctx.beginPath();
   ctx.moveTo(user.x,user.y);
-  p.forEach(n=>ctx.lineTo(n.x,n.y));
+  path.forEach(n=>ctx.lineTo(n.x,n.y));
   ctx.stroke();
 }
 
-// ===== ループ =====
+// ===== ユーザー操作 =====
 window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp")user.y-=5;
-  if(e.key==="ArrowDown")user.y+=5;
-  if(e.key==="ArrowLeft")user.x-=5;
-  if(e.key==="ArrowRight")user.x+=5;
+  let moved=false;
+  if(e.key==="ArrowUp"){ user.y-=5; moved=true; }
+  if(e.key==="ArrowDown"){ user.y+=5; moved=true; }
+  if(e.key==="ArrowLeft"){ user.x-=5; moved=true; }
+  if(e.key==="ArrowRight"){ user.x+=5; moved=true; }
+  if(moved) updatePath(); // 移動時だけ再計算
 });
 
+// 初期経路計算
+updatePath();
+
+// ===== メインループ =====
 (function loop(){
-  const s=nearestNode();
-  const g=goalNode();
-  if(g){
-    const p=astar(s,g);
-    draw(p);
-  }
-  userMarker.style.left=user.x+"px";
-  userMarker.style.top=user.y+"px";
+  draw();
+  userMarker.style.left=(user.x-6)+"px";
+  userMarker.style.top=(user.y-6)+"px";
   requestAnimationFrame(loop);
 })();
