@@ -133,25 +133,30 @@ function astar(start,goal){
 
 // ===== 最寄り空きロッドノード =====
 function nearestRodNode() {
-  const emptyRods = rods.filter(r=>r.status===0);
-  if(!emptyRods.length) return null;
+  const emptyRods = rods.filter(r => r.status === 0);
+  if (!emptyRods.length) return null;
 
   // 最も近い空きロッド
   let nearestRod = emptyRods[0];
   let minDist = Math.hypot(user.x - nearestRod.canvasX, user.y - nearestRod.canvasY);
   emptyRods.forEach(r => {
     const d = Math.hypot(user.x - r.canvasX, user.y - r.canvasY);
-    if(d < minDist) { nearestRod = r; minDist = d; }
+    if (d < minDist) { nearestRod = r; minDist = d; }
   });
 
-  // ロッド前ノードを選ぶ
-  const goalNode = nodes.filter(n => n.rodCol === nearestRod.col)
-                        .reduce((prev,curr) => 
-                          Math.hypot(curr.x - nearestRod.canvasX, curr.y - nearestRod.canvasY) <
-                          Math.hypot(prev.x - nearestRod.canvasX, prev.y - nearestRod.canvasY) ? curr : prev
-                        );
-  goalNode.targetRod = nearestRod;
-  return goalNode;
+  // そのロッドの前ノード群
+  const rodNodes = nodes.filter(n => n.rodCol === nearestRod.col);
+  if (!rodNodes.length) return null;
+
+  // ユーザーに最も近いノードを選択
+  let nearestNode = rodNodes[0];
+  let nodeMinDist = Math.hypot(user.x - nearestNode.x, user.y - nearestNode.y);
+  rodNodes.forEach(n => {
+    const d = Math.hypot(user.x - n.x, user.y - n.y);
+    if (d < nodeMinDist) { nearestNode = n; nodeMinDist = d; }
+  });
+
+  return nearestNode;
 }
 
 // ===== 経路描画 =====
