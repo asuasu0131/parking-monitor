@@ -15,3 +15,11 @@ button { padding:6px 10px; margin:2px; font-size:14px; }
 }
 .empty { background:#4caf50; }
 .full  { background:#f44336; }
+
+.road {
+  position: absolute;
+  background: rgba(200,200,200,0.5); /* 半透明グレー */
+  border: 1px dashed #888;
+  z-index: 500; /* ロッドより下に表示 */
+  cursor: move;
+}

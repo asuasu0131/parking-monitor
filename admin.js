@@ -93,7 +93,10 @@ document.getElementById("add-rod").onclick = ()=>{
   renderRods();
 };
 
-document.getElementById("add-road").onclick = ()=>addRoad();
+document.getElementById("add-road").onclick = ()=>{
+  addRoad(50,50,150,60); // 適当な初期位置・サイズ
+  renderRoads();          // 追加後すぐ表示
+};
 
 document.getElementById("save-layout").onclick = async ()=>{
   const layout = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
