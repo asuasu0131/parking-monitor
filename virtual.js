@@ -9,6 +9,7 @@ const colCount = 6;
 const colW = 70;
 const rowH = 50;
 const padRows = 1;
+
 let user = { x:0, y:0 };
 
 // ===== ロッド =====
@@ -27,15 +28,15 @@ rods.forEach(r=>{
   d.onclick=()=>{
     r.status^=1;
     d.className="rod "+(r.status?"full":"empty");
-    needsUpdate = true;
   };
   lot.appendChild(d);
   r.el=d;
 });
 
-// ===== ノード =====
+// ===== ノード（Mapで一意化）=====
 const nodeMap=new Map();
 function key(r,c){return `${r},${c}`;}
+
 function getNode(r,c){
   const k=key(r,c);
   if(!nodeMap.has(k)){
@@ -44,14 +45,14 @@ function getNode(r,c){
   return nodeMap.get(k);
 }
 
-// 通路ノード
+// 通路
 for(let r=0;r<rowCount+padRows*2;r++){
   for(let c=0;c<colCount;c++){
     if(![0,2,3,5].includes(c)) getNode(r,c);
   }
 }
 
-// ロッド前ノード
+// ロッド前ノード（通路を流用）
 rods.forEach(r=>{
   const nr=r.row+padRows;
   const nc=(r.col<=2)?1:4;
@@ -59,9 +60,6 @@ rods.forEach(r=>{
   n.rod=r;
   r.front=n;
 });
-
-// 通路入り口ノード（必ず作成）
-const entryNodes=[getNode(0,1), getNode(0,4)];
 
 // 隣接
 nodeMap.forEach(n=>{
@@ -91,12 +89,10 @@ function resize(){
     r.el.style.top=r.cy-rowH/2+"px";
   });
 
-  if(user.x===0 && user.y===0){
+  if(!user.x){
     user.x=canvas.width/2;
     user.y=canvas.height-rowH;
   }
-
-  needsUpdate = true;
 }
 resize();
 window.addEventListener("resize",resize);
@@ -104,11 +100,8 @@ window.addEventListener("resize",resize);
 // ===== A* =====
 function h(a,b){return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
 function astar(s,g){
-  if(!s || !g) return [];
   const open=[s],came=new Map(),gScore=new Map([[s,0]]);
-  let safety=0;
-  while(open.length && safety<1000){
-    safety++;
+  while(open.length){
     open.sort((a,b)=>(gScore.get(a)+h(a,g))-(gScore.get(b)+h(b,g)));
     const cur=open.shift();
     if(cur===g){
@@ -145,7 +138,7 @@ function goalNode(){
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!p || !p.length) return;
+  if(!p.length) return;
   ctx.strokeStyle="blue";
   ctx.lineWidth=4;
   ctx.beginPath();
@@ -154,35 +147,22 @@ function draw(p){
   ctx.stroke();
 }
 
-// ===== ユーザー操作 =====
-const moveStep=5;
-let needsUpdate = true;
-
+// ===== ループ =====
 window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp"){ user.y-=moveStep; needsUpdate=true; }
-  if(e.key==="ArrowDown"){ user.y+=moveStep; needsUpdate=true; }
-  if(e.key==="ArrowLeft"){ user.x-=moveStep; needsUpdate=true; }
-  if(e.key==="ArrowRight"){ user.x+=moveStep; needsUpdate=true; }
+  if(e.key==="ArrowUp")user.y-=5;
+  if(e.key==="ArrowDown")user.y+=5;
+  if(e.key==="ArrowLeft")user.x-=5;
+  if(e.key==="ArrowRight")user.x+=5;
 });
 
-// ===== メインループ =====
 (function loop(){
-  if(needsUpdate){
-    const s=nearestNode();
-    const g=goalNode();
-    if(g){
-      const entry = entryNodes.reduce((a,b)=>
-        Math.hypot(b.x-user.x,b.y-user.y)<
-        Math.hypot(a.x-user.x,a.y-user.y)?b:a);
-      const path1=astar(s,entry);
-      const path2=astar(entry,g);
-      draw([...path1,...path2]);
-    } else {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-    }
-    needsUpdate = false;
+  const s=nearestNode();
+  const g=goalNode();
+  if(g){
+    const p=astar(s,g);
+    draw(p);
   }
-  userMarker.style.left=(user.x-6)+"px";
-  userMarker.style.top=(user.y-6)+"px";
+  userMarker.style.left=user.x+"px";
+  userMarker.style.top=user.y+"px";
   requestAnimationFrame(loop);
 })();
