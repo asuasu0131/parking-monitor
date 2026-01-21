@@ -28,6 +28,7 @@ rods.forEach(r=>{
   d.onclick=()=>{
     r.status^=1;
     d.className="rod "+(r.status?"full":"empty");
+    recalcPath();
   };
   lot.appendChild(d);
   r.el=d;
@@ -95,7 +96,7 @@ function resize(){
 resize();
 window.addEventListener("resize",resize);
 
-// ===== A*（軽量版） =====
+// ===== A* =====
 function h(a,b){ return Math.abs(a.row-b.row) + Math.abs(a.col-b.col); }
 function astar(start,goal){
   if(!start || !goal) return [];
@@ -130,12 +131,9 @@ function nearestNode(){
 function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
   if(emptyRods.length===0) return null;
-
   let nearestRod = emptyRods.reduce((a,b)=>
     Math.hypot(b.cx-user.x,b.cy-user.y) < Math.hypot(a.cx-user.x,a.cy-user.y) ? b : a
   );
-
-  // 前ノードがなければロッド位置を仮ノードとして返す
   return nearestRod.front || { x: nearestRod.cx, y: nearestRod.cy, neighbors: [] };
 }
 
@@ -158,18 +156,26 @@ window.addEventListener("keydown",e=>{
   if(e.key==="ArrowDown") user.y+=moveStep;
   if(e.key==="ArrowLeft") user.x-=moveStep;
   if(e.key==="ArrowRight") user.x+=moveStep;
+  recalcPath();
 });
 
-// ===== メインループ =====
+// ===== 軽量化: 経路は100msごとに再計算 =====
 let path=[];
-(function loop(){
+let lastGoal = null;
+function recalcPath(){
   const s = nearestNode();
   const g = nearestGoalNode();
-  if(g) path = astar(s,g);
-  draw(path);
+  // ゴールが変わったときのみ再計算
+  if(!g || g === lastGoal) return;
+  lastGoal = g;
+  path = astar(s,g);
+}
+setInterval(recalcPath,100);
 
+// ===== メインループ =====
+(function loop(){
+  draw(path);
   userMarker.style.left = (user.x-6) + "px";
   userMarker.style.top = (user.y-6) + "px";
-
   requestAnimationFrame(loop);
 })();
