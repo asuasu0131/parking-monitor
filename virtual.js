@@ -33,10 +33,9 @@ rods.forEach(r=>{
   r.el=d;
 });
 
-// ===== ノード（Mapで一意化）=====
+// ===== ノード =====
 const nodeMap=new Map();
 function key(r,c){return `${r},${c}`;}
-
 function getNode(r,c){
   const k=key(r,c);
   if(!nodeMap.has(k)){
@@ -52,7 +51,7 @@ for(let r=0;r<rowCount+padRows*2;r++){
   }
 }
 
-// ロッド前ノード（通路を流用）
+// ロッド前ノード
 rods.forEach(r=>{
   const nr=r.row+padRows;
   const nc=(r.col<=2)?1:4;
@@ -60,6 +59,9 @@ rods.forEach(r=>{
   n.rod=r;
   r.front=n;
 });
+
+// 通路入り口ノード（最上段に追加）
+const entryNodes=[getNode(padRows-1,1), getNode(padRows-1,4)];
 
 // 隣接
 nodeMap.forEach(n=>{
@@ -159,8 +161,14 @@ window.addEventListener("keydown",e=>{
   const s=nearestNode();
   const g=goalNode();
   if(g){
-    const p=astar(s,g);
-    draw(p);
+    // 最寄りの入り口を選ぶ
+    const entry = entryNodes.reduce((a,b)=>
+      Math.hypot(b.x-user.x,b.y-user.y)<
+      Math.hypot(a.x-user.x,a.y-user.y)?b:a);
+    // 2段階で経路を結合
+    const path1=astar(s,entry);
+    const path2=astar(entry,g);
+    draw([...path1,...path2]);
   }
   userMarker.style.left=user.x+"px";
   userMarker.style.top=user.y+"px";
