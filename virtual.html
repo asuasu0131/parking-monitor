@@ -33,10 +33,23 @@
     border:2px solid #888;
     overflow:hidden;
   }
+  #user-marker, #heading-arrow {
+    position:absolute;
+    width:12px;
+    height:12px;
+    background:red;
+    border-radius:50%;
+    z-index:2;
+  }
+  #heading-arrow {
+    width:16px;
+    height:16px;
+    background:orange;
+  }
 </style>
 </head>
 <body>
-<h1>駐車場ナビ（上下スペース・完全版）</h1>
+<h1>駐車場ナビ（上下スペース付き・完全版）</h1>
 
 <div id="controller">
   <button id="up">↑</button><br>

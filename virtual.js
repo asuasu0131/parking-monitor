@@ -6,8 +6,8 @@ const userMarker = document.getElementById("user-marker");
 const headingArrow = document.getElementById("heading-arrow");
 
 // ===== 設定 =====
-const rowCount = 9;       
-const colCount = 6;       
+const rowCount = 9;
+const colCount = 6;
 const colWidth = 70;
 const rowHeight = 50;
 const verticalPaddingRows = 1; // 上下スペース
@@ -48,15 +48,15 @@ function initRods() {
   });
 }
 
-// ===== 通路ノード（ロッド前に必ずノード） =====
+// ===== 通路ノード =====
 const nodes = [];
 function initNodes() {
   nodes.length = 0;
   const totalRows = rowCount + verticalPaddingRows * 2;
   for (let r = 0; r < totalRows; r++) {
     for (let c = 0; c < colCount; c++) {
-      // ロッド前列にノードを必ず作る
       if ([0,2,3,5].includes(c) && r >= verticalPaddingRows && r < verticalPaddingRows + rowCount) {
+        // ロッド前ノード
         nodes.push({ row: r, col: c - 1 >= 0 ? c - 1 : c, x:0, y:0, neighbors: [], rodCol: c });
       } else if (![0,2,3,5].includes(c)) {
         nodes.push({ row: r, col: c, x:0, y:0, neighbors: [], rodCol: null });
@@ -64,13 +64,12 @@ function initNodes() {
     }
   }
 
-  // 隣接ノード設定（上下左右）
   nodes.forEach(n => {
     n.neighbors = nodes.filter(o => Math.abs(o.row - n.row) + Math.abs(o.col - n.col) === 1);
   });
 }
 
-// ===== Canvasと座標 =====
+// ===== Canvas座標 =====
 let offsetX = 0, offsetY = 0;
 function resizeCanvas() {
   const rect = container.getBoundingClientRect();
@@ -83,13 +82,11 @@ function resizeCanvas() {
   offsetX = (rect.width - totalWidth)/2;
   offsetY = (rect.height - totalHeight)/2;
 
-  // ユーザー初期位置は下中央（入口）
   if (!user.x && !user.y) {
     user.x = rect.width/2;
     user.y = rect.height - rowHeight/2;
   }
 
-  // ロッド位置
   rods.forEach(r => {
     r.canvasX = offsetX + r.col * colWidth + colWidth/2;
     r.canvasY = offsetY + verticalPaddingRows*rowHeight + r.row*rowHeight + rowHeight/2;
@@ -97,7 +94,6 @@ function resizeCanvas() {
     r.element.style.top = (r.canvasY - rowHeight/2) + "px";
   });
 
-  // ノード位置
   nodes.forEach(n => {
     n.x = offsetX + n.col * colWidth + colWidth/2;
     n.y = offsetY + n.row * rowHeight + rowHeight/2;
@@ -131,29 +127,26 @@ function astar(start,goal){
   return [];
 }
 
-// ===== 最寄り空きロッドノード =====
+// ===== 最寄り空きロッド前ノード =====
 function nearestRodNode() {
   const emptyRods = rods.filter(r => r.status === 0);
   if (!emptyRods.length) return null;
 
-  // 最も近い空きロッド
   let nearestRod = emptyRods[0];
   let minDist = Math.hypot(user.x - nearestRod.canvasX, user.y - nearestRod.canvasY);
   emptyRods.forEach(r => {
     const d = Math.hypot(user.x - r.canvasX, user.y - r.canvasY);
-    if (d < minDist) { nearestRod = r; minDist = d; }
+    if(d < minDist){ nearestRod = r; minDist = d; }
   });
 
-  // そのロッドの前ノード群
   const rodNodes = nodes.filter(n => n.rodCol === nearestRod.col);
-  if (!rodNodes.length) return null;
+  if(!rodNodes.length) return null;
 
-  // ユーザーに最も近いノードを選択
   let nearestNode = rodNodes[0];
   let nodeMinDist = Math.hypot(user.x - nearestNode.x, user.y - nearestNode.y);
   rodNodes.forEach(n => {
     const d = Math.hypot(user.x - n.x, user.y - n.y);
-    if (d < nodeMinDist) { nearestNode = n; nodeMinDist = d; }
+    if(d < nodeMinDist){ nearestNode = n; nodeMinDist = d; }
   });
 
   return nearestNode;
@@ -168,23 +161,18 @@ function drawPath(path){
   ctx.strokeStyle = "blue";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(user.x,user.y);
-  path.forEach(n => ctx.lineTo(n.x,n.y));
-
-  // **修正点**：最後にロッド中心ではなく、最後のノード位置で線を止める
-  // const goalRod = path.length ? path[path.length-1].targetRod : null;
-  // if(goalRod) ctx.lineTo(goalRod.canvasX, goalRod.canvasY);
-
+  ctx.moveTo(user.x, user.y);
+  path.forEach(n => ctx.lineTo(n.x, n.y));
   ctx.stroke();
 }
 
 // ===== 赤矢印 =====
 function updateArrow(){
   if(currentPath.length>0){
-    const next=currentPath[0];
+    const next = currentPath[0];
     const dx = next.x - user.x;
     const dy = next.y - user.y;
-    const angle = Math.atan2(dy,dx)*180/Math.PI;
+    const angle = Math.atan2(dy, dx)*180/Math.PI;
     headingArrow.style.left = user.x + "px";
     headingArrow.style.top = user.y + "px";
     headingArrow.style.transform = `translate(-50%,-100%) rotate(${angle}deg)`;
