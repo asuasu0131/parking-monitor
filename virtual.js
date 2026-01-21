@@ -10,7 +10,7 @@ const rowCount = 9;
 const colCount = 6;
 const colWidth = 70;
 const rowHeight = 50;
-const verticalPaddingRows = 1; // 上下スペース
+const verticalPaddingRows = 1;
 const moveStep = 5;
 
 // ===== ユーザー =====
@@ -20,16 +20,17 @@ let user = { x: 0, y: 0 };
 const rods = [];
 function initRods() {
   for (let r = 0; r < rowCount; r++) {
-    rods.push({ id: `A${r+1}`, col: 0, row: r, status: 0 });
-    rods.push({ id: `B${r+1}`, col: 2, row: r, status: 0 });
-    rods.push({ id: `C${r+1}`, col: 3, row: r, status: 0 });
-    rods.push({ id: `D${r+1}`, col: 5, row: r, status: 0 });
+    rods.push({ id:`A${r+1}`, col:0, row:r, status:0 });
+    rods.push({ id:`B${r+1}`, col:2, row:r, status:0 });
+    rods.push({ id:`C${r+1}`, col:3, row:r, status:0 });
+    rods.push({ id:`D${r+1}`, col:5, row:r, status:0 });
   }
+
   rods.forEach(r => {
     const d = document.createElement("div");
     d.className = "rod empty";
-    d.style.width = colWidth + "px";
-    d.style.height = rowHeight + "px";
+    d.style.width = colWidth+"px";
+    d.style.height = rowHeight+"px";
     d.style.position = "absolute";
     d.style.display = "flex";
     d.style.alignItems = "center";
@@ -38,49 +39,67 @@ function initRods() {
     d.style.fontWeight = "bold";
     d.style.color = "white";
     d.innerHTML = r.id;
-    lot.appendChild(d);
-    r.element = d;
 
     d.onclick = () => {
       r.status = r.status === 0 ? 1 : 0;
       d.className = "rod " + (r.status === 0 ? "empty" : "full");
     };
+
+    lot.appendChild(d);
+    r.element = d;
   });
 }
 
-// ===== 通路ノード =====
+// ===== ノード =====
 const nodes = [];
 function initNodes() {
   nodes.length = 0;
   const totalRows = rowCount + verticalPaddingRows * 2;
+
+  // 通路ノード
   for (let r = 0; r < totalRows; r++) {
     for (let c = 0; c < colCount; c++) {
-      if ([0,2,3,5].includes(c) && r >= verticalPaddingRows && r < verticalPaddingRows + rowCount) {
-        // ロッド前ノード
-        nodes.push({ row: r, col: c - 1 >= 0 ? c - 1 : c, x:0, y:0, neighbors: [], rodCol: c });
-      } else if (![0,2,3,5].includes(c)) {
-        nodes.push({ row: r, col: c, x:0, y:0, neighbors: [], rodCol: null });
+      if (![0,2,3,5].includes(c)) {
+        nodes.push({ row:r, col:c, x:0, y:0, neighbors:[], targetRod:null });
       }
     }
   }
 
+  // ロッド前ノード（1ロッド=1ノード）
+  rods.forEach(r => {
+    const nodeCol = (r.col === 0 || r.col === 2) ? 1 : 4;
+    const nodeRow = r.row + verticalPaddingRows;
+
+    const n = {
+      row: nodeRow,
+      col: nodeCol,
+      x:0,
+      y:0,
+      neighbors:[],
+      targetRod: r
+    };
+    nodes.push(n);
+    r.frontNode = n;
+  });
+
+  // 隣接
   nodes.forEach(n => {
-    n.neighbors = nodes.filter(o => Math.abs(o.row - n.row) + Math.abs(o.col - n.col) === 1);
+    n.neighbors = nodes.filter(o =>
+      Math.abs(o.row-n.row)+Math.abs(o.col-n.col) === 1
+    );
   });
 }
 
-// ===== Canvas座標 =====
-let offsetX = 0, offsetY = 0;
+// ===== 座標 =====
+let offsetX=0, offsetY=0;
 function resizeCanvas() {
   const rect = container.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
 
   const totalRows = rowCount + verticalPaddingRows*2;
-  const totalHeight = totalRows * rowHeight;
-  const totalWidth = colCount * colWidth;
-  offsetX = (rect.width - totalWidth)/2;
-  offsetY = (rect.height - totalHeight)/2;
+  offsetX = (rect.width - colCount*colWidth)/2;
+  offsetY = (rect.height - totalRows*rowHeight)/2;
 
   if (!user.x && !user.y) {
     user.x = rect.width/2;
@@ -88,135 +107,108 @@ function resizeCanvas() {
   }
 
   rods.forEach(r => {
-    r.canvasX = offsetX + r.col * colWidth + colWidth/2;
+    r.canvasX = offsetX + r.col*colWidth + colWidth/2;
     r.canvasY = offsetY + verticalPaddingRows*rowHeight + r.row*rowHeight + rowHeight/2;
-    r.element.style.left = (r.canvasX - colWidth/2) + "px";
-    r.element.style.top = (r.canvasY - rowHeight/2) + "px";
+    r.element.style.left = (r.canvasX-colWidth/2)+"px";
+    r.element.style.top  = (r.canvasY-rowHeight/2)+"px";
   });
 
   nodes.forEach(n => {
-    n.x = offsetX + n.col * colWidth + colWidth/2;
-    n.y = offsetY + n.row * rowHeight + rowHeight/2;
+    n.x = offsetX + n.col*colWidth + colWidth/2;
+    n.y = offsetY + n.row*rowHeight + rowHeight/2;
   });
 }
 
 // ===== A* =====
 function heuristic(a,b){ return Math.abs(a.row-b.row)+Math.abs(a.col-b.col); }
 function astar(start,goal){
-  const openSet = [start], came=new Map(), g=new Map(), f=new Map();
+  const open=[start], came=new Map(), g=new Map(), f=new Map();
   g.set(start,0); f.set(start,heuristic(start,goal));
-  while(openSet.length){
-    openSet.sort((a,b)=>(f.get(a)||1e6)-(f.get(b)||1e6));
-    const current = openSet.shift();
-    if(current === goal){
+
+  while(open.length){
+    open.sort((a,b)=>(f.get(a)||1e9)-(f.get(b)||1e9));
+    const cur=open.shift();
+    if(cur===goal){
       const path=[];
-      let c=current;
+      let c=cur;
       while(c){ path.unshift(c); c=came.get(c); }
       return path;
     }
-    current.neighbors.forEach(n=>{
-      const tentative = (g.get(current)||1e6)+1;
-      if(tentative < (g.get(n)||1e6)){
-        came.set(n,current);
-        g.set(n,tentative);
-        f.set(n, tentative + heuristic(n,goal));
-        if(!openSet.includes(n)) openSet.push(n);
+    cur.neighbors.forEach(n=>{
+      const t=(g.get(cur)||1e9)+1;
+      if(t<(g.get(n)||1e9)){
+        came.set(n,cur);
+        g.set(n,t);
+        f.set(n,t+heuristic(n,goal));
+        if(!open.includes(n)) open.push(n);
       }
     });
   }
   return [];
 }
 
-// ===== 最寄り空きロッド前ノード =====
-function nearestRodNode() {
-  const emptyRods = rods.filter(r => r.status === 0);
-  if (!emptyRods.length) return null;
+// ===== ゴール =====
+function nearestRodNode(){
+  const empties = rods.filter(r=>r.status===0);
+  if(!empties.length) return null;
 
-  let nearestRod = emptyRods[0];
-  let minDist = Math.hypot(user.x - nearestRod.canvasX, user.y - nearestRod.canvasY);
-  emptyRods.forEach(r => {
-    const d = Math.hypot(user.x - r.canvasX, user.y - r.canvasY);
-    if(d < minDist){ nearestRod = r; minDist = d; }
+  let best=empties[0];
+  let dmin=Math.hypot(user.x-best.canvasX,user.y-best.canvasY);
+  empties.forEach(r=>{
+    const d=Math.hypot(user.x-r.canvasX,user.y-r.canvasY);
+    if(d<dmin){ best=r; dmin=d; }
   });
-
-  const rodNodes = nodes.filter(n => n.rodCol === nearestRod.col);
-  if(!rodNodes.length) return null;
-
-  let nearestNode = rodNodes[0];
-  let nodeMinDist = Math.hypot(user.x - nearestNode.x, user.y - nearestNode.y);
-  rodNodes.forEach(n => {
-    const d = Math.hypot(user.x - n.x, user.y - n.y);
-    if(d < nodeMinDist){ nearestNode = n; nodeMinDist = d; }
-  });
-
-  return nearestNode;
+  return best.frontNode;
 }
 
-// ===== 経路描画 =====
-let currentPath = [];
+// ===== 描画 =====
+let currentPath=[];
 function drawPath(path){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!path.length) return;
-
-  ctx.strokeStyle = "blue";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle="blue";
+  ctx.lineWidth=4;
   ctx.beginPath();
-  ctx.moveTo(user.x, user.y);
-  path.forEach(n => ctx.lineTo(n.x, n.y));
+  ctx.moveTo(user.x,user.y);
+  path.forEach(n=>ctx.lineTo(n.x,n.y));
   ctx.stroke();
 }
 
-// ===== 赤矢印 =====
+// ===== 矢印 =====
 function updateArrow(){
-  if(currentPath.length>0){
-    const next = currentPath[0];
-    const dx = next.x - user.x;
-    const dy = next.y - user.y;
-    const angle = Math.atan2(dy, dx)*180/Math.PI;
-    headingArrow.style.left = user.x + "px";
-    headingArrow.style.top = user.y + "px";
-    headingArrow.style.transform = `translate(-50%,-100%) rotate(${angle}deg)`;
+  if(currentPath.length){
+    const n=currentPath[0];
+    const a=Math.atan2(n.y-user.y,n.x-user.x)*180/Math.PI;
+    headingArrow.style.left=user.x+"px";
+    headingArrow.style.top=user.y+"px";
+    headingArrow.style.transform=`translate(-50%,-100%) rotate(${a}deg)`;
   }
-  userMarker.style.left = user.x + "px";
-  userMarker.style.top = user.y + "px";
+  userMarker.style.left=user.x+"px";
+  userMarker.style.top=user.y+"px";
 }
 
-// ===== 移動 =====
-function moveUp(){ user.y -= moveStep; }
-function moveDown(){ user.y += moveStep; }
-function moveLeft(){ user.x -= moveStep; }
-function moveRight(){ user.x += moveStep; }
-
-document.getElementById("up").onclick=moveUp;
-document.getElementById("down").onclick=moveDown;
-document.getElementById("left").onclick=moveLeft;
-document.getElementById("right").onclick=moveRight;
-window.addEventListener("keydown", e=>{
-  switch(e.key){
-    case "ArrowUp": moveUp(); break;
-    case "ArrowDown": moveDown(); break;
-    case "ArrowLeft": moveLeft(); break;
-    case "ArrowRight": moveRight(); break;
-  }
+// ===== 操作 =====
+const mv={ArrowUp:()=>user.y-=moveStep,ArrowDown:()=>user.y+=moveStep,
+          ArrowLeft:()=>user.x-=moveStep,ArrowRight:()=>user.x+=moveStep};
+Object.keys(mv).forEach(k=>{
+  document.getElementById(k.replace("Arrow","").toLowerCase()).onclick=mv[k];
 });
+window.addEventListener("keydown",e=>mv[e.key]?.());
 
-// ===== メインループ =====
-function mainLoop(){
-  const startNode = nodes.reduce((prev,curr)=>
-    Math.hypot(curr.x - user.x, curr.y - user.y) < Math.hypot(prev.x - user.x, prev.y - user.y) ? curr : prev
-  , nodes[0]);
-
-  const goalNode = nearestRodNode();
-  if(goalNode) currentPath = astar(startNode, goalNode);
-
+// ===== ループ =====
+function loop(){
+  const start=nodes.reduce((p,c)=>
+    Math.hypot(c.x-user.x,c.y-user.y)<Math.hypot(p.x-user.x,p.y-user.y)?c:p,nodes[0]);
+  const goal=nearestRodNode();
+  if(goal) currentPath=astar(start,goal);
   drawPath(currentPath);
   updateArrow();
-  requestAnimationFrame(mainLoop);
+  requestAnimationFrame(loop);
 }
 
 // ===== 初期化 =====
 initRods();
 initNodes();
 resizeCanvas();
-mainLoop();
-window.addEventListener("resize", resizeCanvas);
+loop();
+window.addEventListener("resize",resizeCanvas);
