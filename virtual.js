@@ -43,7 +43,6 @@ function initRods() {
 
     d.onclick = () => {
       r.status = r.status === 0 ? 1 : 0;
-      d.className = "rod " + (r.status === 0 ? "empty" : "full");
     };
   });
 }
@@ -52,23 +51,22 @@ function initRods() {
 const nodes = [];
 function initNodes() {
   nodes.length = 0;
-  const totalRows = rowCount + verticalPaddingRows * 2;
+  const totalRows = rowCount + verticalPaddingRows*2;
   for(let r=0; r<totalRows; r++){
     for(let c=0; c<colCount; c++){
-      // ロッド列は避ける
+      // ロッド列以外は通路
       if([0,2,3,5].includes(c) && r>=verticalPaddingRows && r<verticalPaddingRows+rowCount) continue;
       nodes.push({ row: r, col: c, x:0, y:0, neighbors: [] });
     }
   }
-  // 隣接ノード
   nodes.forEach(n=>{
-    n.neighbors = nodes.filter(o => Math.abs(o.row - n.row) + Math.abs(o.col - n.col) === 1);
+    n.neighbors = nodes.filter(o => Math.abs(o.row-n.row)+Math.abs(o.col-n.col)===1);
   });
 }
 
 // ===== Canvasと座標 =====
-let offsetX = 0, offsetY = 0;
-function resizeCanvas() {
+let offsetX=0, offsetY=0;
+function resizeCanvas(){
   const rect = container.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
@@ -79,7 +77,6 @@ function resizeCanvas() {
   offsetX = (rect.width - totalWidth)/2;
   offsetY = (rect.height - totalHeight)/2;
 
-  // ユーザー初期位置は下中央（入口）
   if(!user.x && !user.y){
     user.x = rect.width/2;
     user.y = rect.height - rowHeight/2;
@@ -89,8 +86,8 @@ function resizeCanvas() {
   rods.forEach(r=>{
     r.canvasX = offsetX + r.col*colWidth + colWidth/2;
     r.canvasY = offsetY + verticalPaddingRows*rowHeight + r.row*rowHeight + rowHeight/2;
-    r.element.style.left = (r.canvasX - colWidth/2) + "px";
-    r.element.style.top = (r.canvasY - rowHeight/2) + "px";
+    r.element.style.left = (r.canvasX - colWidth/2)+"px";
+    r.element.style.top = (r.canvasY - rowHeight/2)+"px";
   });
 
   // ノード位置
@@ -103,12 +100,12 @@ function resizeCanvas() {
 // ===== A* =====
 function heuristic(a,b){ return Math.abs(a.row-b.row)+Math.abs(a.col-b.col); }
 function astar(start,goal){
-  const openSet = [start], came=new Map(), g=new Map(), f=new Map();
+  const openSet=[start], came=new Map(), g=new Map(), f=new Map();
   g.set(start,0); f.set(start,heuristic(start,goal));
   while(openSet.length){
     openSet.sort((a,b)=>(f.get(a)||1e6)-(f.get(b)||1e6));
-    const current = openSet.shift();
-    if(current === goal){
+    const current=openSet.shift();
+    if(current===goal){
       const path=[];
       let c=current;
       while(c){ path.unshift(c); c=came.get(c); }
@@ -127,10 +124,11 @@ function astar(start,goal){
   return [];
 }
 
-// ===== 最寄り空きロッドノード =====
+// ===== 最寄り空きロッドの前ノード =====
 function nearestRodNode(){
   const emptyRods = rods.filter(r=>r.status===0);
   if(!emptyRods.length) return null;
+
   let nearest = emptyRods[0];
   let minDist = Math.hypot(user.x - nearest.canvasX, user.y - nearest.canvasY);
   emptyRods.forEach(r=>{
@@ -138,24 +136,32 @@ function nearestRodNode(){
     if(d<minDist){ nearest=r; minDist=d; }
   });
 
-  // 最も近い通路ノード
-  const goalNode = nodes.reduce((prev,curr)=>{
-    return Math.hypot(curr.x - nearest.canvasX, curr.y - nearest.canvasY) <
-           Math.hypot(prev.x - nearest.canvasX, prev.y - nearest.canvasY) ? curr : prev;
-  }, nodes[0]);
+  // ロッドの手前に最も近い通路ノード
+  let goalNode = null;
+  let minNodeDist = 1e6;
+  nodes.forEach(n=>{
+    const dist = Math.hypot(n.x - nearest.canvasX, n.y - nearest.canvasY);
+    if(dist<minNodeDist){ goalNode=n; minNodeDist=dist; }
+  });
   return goalNode;
 }
 
 // ===== 経路描画 =====
-let currentPath = [];
+let currentPath=[];
 function drawPath(path){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!path.length) return;
-  ctx.strokeStyle = "blue";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle="blue";
+  ctx.lineWidth=4;
   ctx.beginPath();
   ctx.moveTo(user.x,user.y);
   path.forEach(n=>ctx.lineTo(n.x,n.y));
+  // 最後にロッド前まで直線追加
+  const goalRod = nearestRodNode();
+  if(goalRod){
+    const rod = rods.find(r=>Math.hypot(r.canvasX-goalRod.x,r.canvasY-goalRod.y)<100);
+    if(rod) ctx.lineTo(rod.canvasX,rod.canvasY);
+  }
   ctx.stroke();
 }
 
@@ -179,7 +185,6 @@ function moveUp(){ user.y-=moveStep; }
 function moveDown(){ user.y+=moveStep; }
 function moveLeft(){ user.x-=moveStep; }
 function moveRight(){ user.x+=moveStep; }
-
 document.getElementById("up").onclick=moveUp;
 document.getElementById("down").onclick=moveDown;
 document.getElementById("left").onclick=moveLeft;
@@ -195,7 +200,7 @@ window.addEventListener("keydown",e=>{
 
 // ===== メインループ =====
 function mainLoop(){
-  const startNode = nodes.reduce((prev,curr)=>
+  const startNode=nodes.reduce((prev,curr)=>
     Math.hypot(curr.x-user.x,curr.y-user.y)<Math.hypot(prev.x-user.x,prev.y-user.y)?curr:prev
   ,nodes[0]);
   const goalNode = nearestRodNode();
