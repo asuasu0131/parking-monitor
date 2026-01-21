@@ -8,10 +8,11 @@ body {
 
 #parking-lot-container {
   position: relative;
-  width: 900px;
-  height: 600px;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 9/6.5;
   margin: 20px auto;
-  background: #ccc;
+  background: #bfbfbf;
   overflow: hidden;
   border-radius: 8px;
   border: 2px solid #888;
@@ -31,8 +32,8 @@ body {
   cursor: pointer;
 }
 
-.empty { background: #4caf50; } /* 空き */
-.full  { background: #f44336; } /* 満 */
+.empty { background: #4caf50; }
+.full  { background: #f44336; }
 
 #user-marker {
   position: absolute;
@@ -53,4 +54,14 @@ body {
   transform-origin: bottom center;
   transform: translate(-50%, -100%) rotate(0deg);
   z-index: 101;
+}
+
+#controller {
+  margin: 10px auto;
+}
+
+#controller button {
+  padding: 8px 12px;
+  font-size: 16px;
+  margin: 2px;
 }
