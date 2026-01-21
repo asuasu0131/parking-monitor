@@ -9,7 +9,6 @@ const colCount = 6;
 const colW = 70;
 const rowH = 50;
 const padRows = 1;
-
 let user = { x:0, y:0 };
 
 // ===== ロッド =====
@@ -28,6 +27,7 @@ rods.forEach(r=>{
   d.onclick=()=>{
     r.status^=1;
     d.className="rod "+(r.status?"full":"empty");
+    needsUpdate = true; // ロッドの状態変更でも経路再計算
   };
   lot.appendChild(d);
   r.el=d;
@@ -60,7 +60,7 @@ rods.forEach(r=>{
   r.front=n;
 });
 
-// 通路入り口ノード（最上段に追加）
+// 通路入り口ノード
 const entryNodes=[getNode(padRows-1,1), getNode(padRows-1,4)];
 
 // 隣接
@@ -95,6 +95,8 @@ function resize(){
     user.x=canvas.width/2;
     user.y=canvas.height-rowH;
   }
+
+  needsUpdate = true; // リサイズでも経路再計算
 }
 resize();
 window.addEventListener("resize",resize);
@@ -103,7 +105,9 @@ window.addEventListener("resize",resize);
 function h(a,b){return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
 function astar(s,g){
   const open=[s],came=new Map(),gScore=new Map([[s,0]]);
-  while(open.length){
+  let safety=0; // 無限ループ防止
+  while(open.length && safety<1000){
+    safety++;
     open.sort((a,b)=>(gScore.get(a)+h(a,g))-(gScore.get(b)+h(b,g)));
     const cur=open.shift();
     if(cur===g){
@@ -123,7 +127,7 @@ function astar(s,g){
   return [];
 }
 
-// ===== 経路 =====
+// ===== 経路計算 =====
 function nearestNode(){
   return nodes.reduce((a,b)=>
     Math.hypot(b.x-user.x,b.y-user.y)<
@@ -149,26 +153,34 @@ function draw(p){
   ctx.stroke();
 }
 
-// ===== ループ =====
+// ===== ユーザー操作 =====
+const moveStep=5;
+let needsUpdate = true;
+
 window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp")user.y-=5;
-  if(e.key==="ArrowDown")user.y+=5;
-  if(e.key==="ArrowLeft")user.x-=5;
-  if(e.key==="ArrowRight")user.x+=5;
+  if(e.key==="ArrowUp"){ user.y-=moveStep; needsUpdate=true; }
+  if(e.key==="ArrowDown"){ user.y+=moveStep; needsUpdate=true; }
+  if(e.key==="ArrowLeft"){ user.x-=moveStep; needsUpdate=true; }
+  if(e.key==="ArrowRight"){ user.x+=moveStep; needsUpdate=true; }
 });
 
+// ===== メインループ =====
 (function loop(){
-  const s=nearestNode();
-  const g=goalNode();
-  if(g){
-    // 最寄りの入り口を選ぶ
-    const entry = entryNodes.reduce((a,b)=>
-      Math.hypot(b.x-user.x,b.y-user.y)<
-      Math.hypot(a.x-user.x,a.y-user.y)?b:a);
-    // 2段階で経路を結合
-    const path1=astar(s,entry);
-    const path2=astar(entry,g);
-    draw([...path1,...path2]);
+  if(needsUpdate){
+    const s=nearestNode();
+    const g=goalNode();
+    if(g){
+      // 最寄りの入り口を選ぶ
+      const entry = entryNodes.reduce((a,b)=>
+        Math.hypot(b.x-user.x,b.y-user.y)<
+        Math.hypot(a.x-user.x,a.y-user.y)?b:a);
+      const path1=astar(s,entry);
+      const path2=astar(entry,g);
+      draw([...path1,...path2]);
+    } else {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+    needsUpdate = false;
   }
   userMarker.style.left=user.x+"px";
   userMarker.style.top=user.y+"px";
