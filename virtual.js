@@ -27,7 +27,7 @@ rods.forEach(r=>{
   d.onclick=()=>{
     r.status^=1;
     d.className="rod "+(r.status?"full":"empty");
-    needsUpdate = true; // ロッドの状態変更でも経路再計算
+    needsUpdate = true;
   };
   lot.appendChild(d);
   r.el=d;
@@ -44,7 +44,7 @@ function getNode(r,c){
   return nodeMap.get(k);
 }
 
-// 通路
+// 通路ノード
 for(let r=0;r<rowCount+padRows*2;r++){
   for(let c=0;c<colCount;c++){
     if(![0,2,3,5].includes(c)) getNode(r,c);
@@ -60,8 +60,8 @@ rods.forEach(r=>{
   r.front=n;
 });
 
-// 通路入り口ノード
-const entryNodes=[getNode(padRows-1,1), getNode(padRows-1,4)];
+// 通路入り口ノード（必ず作成）
+const entryNodes=[getNode(0,1), getNode(0,4)];
 
 // 隣接
 nodeMap.forEach(n=>{
@@ -91,12 +91,12 @@ function resize(){
     r.el.style.top=r.cy-rowH/2+"px";
   });
 
-  if(!user.x){
+  if(user.x===0 && user.y===0){
     user.x=canvas.width/2;
     user.y=canvas.height-rowH;
   }
 
-  needsUpdate = true; // リサイズでも経路再計算
+  needsUpdate = true;
 }
 resize();
 window.addEventListener("resize",resize);
@@ -104,8 +104,9 @@ window.addEventListener("resize",resize);
 // ===== A* =====
 function h(a,b){return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
 function astar(s,g){
+  if(!s || !g) return [];
   const open=[s],came=new Map(),gScore=new Map([[s,0]]);
-  let safety=0; // 無限ループ防止
+  let safety=0;
   while(open.length && safety<1000){
     safety++;
     open.sort((a,b)=>(gScore.get(a)+h(a,g))-(gScore.get(b)+h(b,g)));
@@ -127,7 +128,7 @@ function astar(s,g){
   return [];
 }
 
-// ===== 経路計算 =====
+// ===== 経路 =====
 function nearestNode(){
   return nodes.reduce((a,b)=>
     Math.hypot(b.x-user.x,b.y-user.y)<
@@ -144,7 +145,7 @@ function goalNode(){
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!p.length) return;
+  if(!p || !p.length) return;
   ctx.strokeStyle="blue";
   ctx.lineWidth=4;
   ctx.beginPath();
@@ -170,7 +171,6 @@ window.addEventListener("keydown",e=>{
     const s=nearestNode();
     const g=goalNode();
     if(g){
-      // 最寄りの入り口を選ぶ
       const entry = entryNodes.reduce((a,b)=>
         Math.hypot(b.x-user.x,b.y-user.y)<
         Math.hypot(a.x-user.x,a.y-user.y)?b:a);
@@ -182,7 +182,7 @@ window.addEventListener("keydown",e=>{
     }
     needsUpdate = false;
   }
-  userMarker.style.left=user.x+"px";
-  userMarker.style.top=user.y+"px";
+  userMarker.style.left=(user.x-6)+"px";
+  userMarker.style.top=(user.y-6)+"px";
   requestAnimationFrame(loop);
 })();
