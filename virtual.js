@@ -9,7 +9,7 @@ canvas.style.top = "0";
 canvas.style.left = "0";
 canvas.style.width = "100%";
 canvas.style.height = "100%";
-canvas.style.pointerEvents = "none"; // Canvas上でクリックできないように
+canvas.style.pointerEvents = "none"; // Canvas上でクリックできない
 lot.appendChild(canvas);
 const ctx = canvas.getContext("2d");
 
@@ -26,29 +26,8 @@ const rowCount = 9;
 const colCount = 6;
 const colWidth = 70;
 const rowHeight = 50;
-let offsetX, offsetY;
+let offsetX = 0, offsetY = 0;
 const moveStep = 5;
-
-// ===== Canvasサイズ同期 =====
-function resizeCanvas() {
-  const rect = container.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  offsetX = (rect.width - colWidth * colCount) / 2;
-  offsetY = (rect.height - rowHeight * rowCount) / 2;
-  if (!user.x && !user.y) {
-    user.x = rect.width / 2;
-    user.y = rect.height - 30; // 下中央入口
-  }
-  // ロッド座標も更新
-  rods.forEach(r => {
-    r.canvasX = offsetX + r.col * colWidth + colWidth / 2;
-    r.canvasY = offsetY + r.row * rowHeight + rowHeight / 2;
-    r.element.style.left = (r.canvasX - colWidth / 2) + "px";
-    r.element.style.top = (r.canvasY - rowHeight / 2) + "px";
-  });
-}
-window.addEventListener("resize", resizeCanvas);
 
 // ===== ユーザー =====
 let user = { x: 0, y: 0 };
@@ -56,7 +35,7 @@ let user = { x: 0, y: 0 };
 // ===== ロッド =====
 const rods = [];
 function initRods() {
-  // 1列目(A)、2列目(B)、3列目(C)、4列目(D)
+  // 1列目(A)、3列目(B)、4列目(C)、6列目(D)にロッド
   for (let r = 0; r < rowCount; r++) {
     rods.push({ id: `A${r + 1}`, col: 0, row: r, status: 0 });
     rods.push({ id: `B${r + 1}`, col: 2, row: r, status: 0 });
@@ -68,15 +47,42 @@ function initRods() {
     d.className = "rod " + (r.status === 0 ? "empty" : "full");
     d.style.width = colWidth + "px";
     d.style.height = rowHeight + "px";
+    d.style.position = "absolute";
     lot.appendChild(d);
     r.element = d;
+
+    // クリックで空/満切替
     d.onclick = () => {
       r.status = r.status === 0 ? 1 : 0;
       d.className = "rod " + (r.status === 0 ? "empty" : "full");
-      currentPath = []; // ロッド変更時に再計算
+      currentPath = []; // 再計算
     };
   });
 }
+
+// ===== Canvasサイズ同期 =====
+function resizeCanvas() {
+  const rect = container.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  offsetX = (rect.width - colWidth * colCount) / 2;
+  offsetY = (rect.height - rowHeight * rowCount) / 2;
+
+  // ユーザー初期位置は下中央（入口）
+  if (!user.x && !user.y) {
+    user.x = rect.width / 2;
+    user.y = rect.height - 30;
+  }
+
+  // ロッド位置
+  rods.forEach(r => {
+    r.canvasX = offsetX + r.col * colWidth + colWidth / 2;
+    r.canvasY = offsetY + r.row * rowHeight + rowHeight / 2;
+    r.element.style.left = (r.canvasX - colWidth / 2) + "px";
+    r.element.style.top = (r.canvasY - rowHeight / 2) + "px";
+  });
+}
+window.addEventListener("resize", resizeCanvas);
 
 // ===== 通路ノード =====
 const nodes = [];
@@ -98,9 +104,7 @@ nodes.forEach(n => {
 });
 
 // ===== A* =====
-function heuristic(a, b) {
-  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
-}
+function heuristic(a, b) { return Math.abs(a.row - b.row) + Math.abs(a.col - b.col); }
 function astar(start, goal) {
   const openSet = [start], came = new Map(), g = new Map(), f = new Map();
   g.set(start, 0); f.set(start, heuristic(start, goal));
@@ -136,7 +140,7 @@ function nearestRodNode() {
     const d = Math.hypot(user.x - r.canvasX, user.y - r.canvasY);
     if (d < minDist) { nearest = r; minDist = d; }
   });
-  // 最も近いノードに接続
+  // 最も近い通路ノードに接続
   const goalNode = nodes.reduce((prev, curr) =>
     Math.hypot(curr.x - nearest.canvasX, curr.y - nearest.canvasY) <
     Math.hypot(prev.x - nearest.canvasX, prev.y - nearest.canvasY) ? curr : prev
@@ -192,18 +196,19 @@ window.addEventListener("keydown", e => {
 
 // ===== メインループ =====
 function mainLoop() {
-  resizeCanvas(); // ウィンドウサイズ対応
   const startNode = nodes.reduce((prev, curr) =>
     Math.hypot(curr.x - user.x, curr.y - user.y) < Math.hypot(prev.x - user.x, prev.y - user.y) ? curr : prev
   , nodes[0]);
   const goalNode = nearestRodNode();
   if (goalNode) currentPath = astar(startNode, goalNode);
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPath(currentPath);
   updateArrow();
   requestAnimationFrame(mainLoop);
 }
 
+// ===== 初期化 =====
 initRods();
 resizeCanvas();
 mainLoop();
