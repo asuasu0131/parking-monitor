@@ -59,6 +59,13 @@ body { font-family:sans-serif; }
   <div id="user-marker"></div>
 </div>
 
-<script src="virtual.js"></script>
+<!-- DOM が完全に読み込まれてから実行 -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const script = document.createElement("script");
+  script.src = "virtual.js";
+  document.body.appendChild(script);
+});
+</script>
 </body>
 </html>
