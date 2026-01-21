@@ -8,7 +8,12 @@ import os, json
 
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet"
+)
 
 # ===== HTML =====
 @app.route("/")
@@ -32,6 +37,7 @@ def save_layout():
     data = request.get_json()
     with open("parking_layout.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
     socketio.emit("layout_updated")
     return {"status": "ok"}
 
