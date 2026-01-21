@@ -50,12 +50,12 @@ for(let r=0;r<rowCount+padRows*2;r++){
   }
 }
 
-// ロッド前ノード（通路ノード）
+// ロッド前ノード
 rods.forEach(r=>{
-  const nr = r.row + padRows;
-  const nc = (r.col <= 2) ? 1 : 4;
+  const nr = r.row+padRows;
+  const nc = (r.col<=2)?1:4;
   const n = getNode(nr,nc);
-  n.rod = r;        // 前ノードからロッドにアクセス可能
+  n.rod = r;
   r.front = n;
 });
 
@@ -91,12 +91,11 @@ function resize(){
     user.x = canvas.width/2;
     user.y = canvas.height - rowH;
   }
-  recalcPath();
 }
 resize();
 window.addEventListener("resize",resize);
 
-// ===== BFSで経路計算 =====
+// ===== BFSで最寄り空きロッドまで経路計算（軽量） =====
 function calcPathBFS(start,goal){
   if(!start || !goal) return [];
   const queue = [start];
@@ -126,14 +125,14 @@ function nearestNode(){
     Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a);
 }
 
-// ===== 最寄り空きロッド前ノード =====
+// ===== 最寄り空きロッド =====
 function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
   if(emptyRods.length===0) return null;
   let nearestRod = emptyRods.reduce((a,b)=>
     Math.hypot(b.cx-user.x,b.cy-user.y) < Math.hypot(a.cx-user.x,a.cy-user.y) ? b : a
   );
-  return nearestRod.front;
+  return nearestRod.front || { x: nearestRod.cx, y: nearestRod.cy, neighbors: [] };
 }
 
 // ===== 描画 =====
@@ -148,7 +147,17 @@ function draw(p){
   ctx.stroke();
 }
 
-// ===== 経路再計算（イベント駆動） =====
+// ===== ユーザー操作 =====
+const moveStep = 5;
+window.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp") user.y-=moveStep;
+  if(e.key==="ArrowDown") user.y+=moveStep;
+  if(e.key==="ArrowLeft") user.x-=moveStep;
+  if(e.key==="ArrowRight") user.x+=moveStep;
+  recalcPath();
+});
+
+// ===== 経路再計算（軽量化） =====
 let path=[];
 let lastGoal = null;
 function recalcPath(){
@@ -158,33 +167,12 @@ function recalcPath(){
   lastGoal = g;
   path = calcPathBFS(s,g);
 }
-
-// ===== ユーザー操作 =====
-const moveStep = 5;
-window.addEventListener("keydown",e=>{
-  let moved=false;
-  if(e.key==="ArrowUp") { user.y-=moveStep; moved=true; }
-  if(e.key==="ArrowDown") { user.y+=moveStep; moved=true; }
-  if(e.key==="ArrowLeft") { user.x-=moveStep; moved=true; }
-  if(e.key==="ArrowRight") { user.x+=moveStep; moved=true; }
-  if(moved) recalcPath();
-});
+// 300msごとに再計算
+setInterval(recalcPath,300);
 
 // ===== メインループ =====
 (function loop(){
   draw(path);
-  // frontノード到達でロッド中央に補正
-  if(path.length && path[path.length-1].rod){
-    const goalRod = path[path.length-1].rod;
-    const dx = goalRod.cx - user.x;
-    const dy = goalRod.cy - user.y;
-    if(Math.hypot(dx,dy)<moveStep){
-      user.x = goalRod.cx;
-      user.y = goalRod.cy;
-      path=[]; // 到達後経路リセット
-    }
-  }
-
   userMarker.style.left = (user.x-6) + "px";
   userMarker.style.top = (user.y-6) + "px";
   requestAnimationFrame(loop);
