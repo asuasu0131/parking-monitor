@@ -10,15 +10,16 @@ const colWidth = 70;
 const rowHeight = 50;
 const colGap = 40; // 通路幅
 
-// 列配置: 1列 / 通路 / 2列 / 通路 / 1列
-const colX = [
-  0,                   // 1列目
-  0,                   // 通路 placeholder
-  colWidth + colGap,    // 2列目左
-  colWidth*2 + colGap,  // 2列目右
-  colWidth*2 + colGap + colGap, // 通路 placeholder
-  colWidth*3 + colGap*2 + colWidth // 4列目
-];
+// 1列目
+const x1 = 0;
+// 2列目左
+const x2 = x1 + colWidth + colGap;
+// 2列目右
+const x3 = x2 + colWidth;
+// 4列目
+const x4 = x3 + colGap;
+
+const colX = [x1, x2, x3, x4];
 
 for (let r = 0; r < rowCount; r++) {
   rods.push({id:`A${r+1}`, x: colX[0], y: r*rowHeight, status:0});
