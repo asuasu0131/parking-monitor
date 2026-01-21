@@ -91,12 +91,11 @@ function resize(){
     user.x = canvas.width/2;
     user.y = canvas.height - rowH;
   }
-  recalcPath();
 }
 resize();
 window.addEventListener("resize",resize);
 
-// ===== BFSで最寄り空きロッドまで経路計算 =====
+// ===== BFSで最寄り空きロッドまで経路計算（軽量） =====
 function calcPathBFS(start,goal){
   if(!start || !goal) return [];
   const queue = [start];
@@ -148,7 +147,17 @@ function draw(p){
   ctx.stroke();
 }
 
-// ===== 経路再計算（イベント駆動型） =====
+// ===== ユーザー操作 =====
+const moveStep = 5;
+window.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp") user.y-=moveStep;
+  if(e.key==="ArrowDown") user.y+=moveStep;
+  if(e.key==="ArrowLeft") user.x-=moveStep;
+  if(e.key==="ArrowRight") user.x+=moveStep;
+  recalcPath();
+});
+
+// ===== 経路再計算（軽量化） =====
 let path=[];
 let lastGoal = null;
 function recalcPath(){
@@ -158,18 +167,8 @@ function recalcPath(){
   lastGoal = g;
   path = calcPathBFS(s,g);
 }
-
-// ===== ユーザー操作 =====
-const moveStep = 5;
-function handleMove(e){
-  let moved=false;
-  if(e.key==="ArrowUp") { user.y-=moveStep; moved=true; }
-  if(e.key==="ArrowDown") { user.y+=moveStep; moved=true; }
-  if(e.key==="ArrowLeft") { user.x-=moveStep; moved=true; }
-  if(e.key==="ArrowRight") { user.x+=moveStep; moved=true; }
-  if(moved) recalcPath();
-}
-window.addEventListener("keydown", handleMove);
+// 300msごとに再計算
+setInterval(recalcPath,300);
 
 // ===== メインループ =====
 (function loop(){
