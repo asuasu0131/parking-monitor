@@ -4,12 +4,11 @@ const canvas = document.getElementById("path-canvas");
 const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
-const rowCount = 5; // ← ここを9から5に変更
+const rowCount = 5;
 const colCount = 6;
 const colW = 70;
 const rowH = 50;
 const padRows = 1;
-
 let user = { x:0, y:0 };
 
 // ===== ロッド =====
@@ -96,29 +95,28 @@ function resize(){
 resize();
 window.addEventListener("resize",resize);
 
-// ===== A* =====
-function h(a,b){ return Math.abs(a.row-b.row) + Math.abs(a.col-b.col); }
-function astar(start,goal){
+// ===== BFSで最寄り空きロッドまで経路計算（軽量） =====
+function calcPathBFS(start,goal){
   if(!start || !goal) return [];
-  const open=[start], came=new Map(), gScore=new Map([[start,0]]);
-  while(open.length){
-    open.sort((a,b)=> (gScore.get(a)+h(a,goal))-(gScore.get(b)+h(b,goal)));
-    const cur = open.shift();
-    if(cur === goal){
-      const path=[]; let c=cur;
-      while(c){ path.unshift(c); c=came.get(c); }
-      return path;
-    }
-    cur.neighbors.forEach(n=>{
-      const t = gScore.get(cur)+1;
-      if(t < (gScore.get(n)||1e9)){
+  const queue = [start];
+  const came = new Map([[start,null]]);
+  while(queue.length){
+    const cur = queue.shift();
+    if(cur===goal) break;
+    for(const n of cur.neighbors){
+      if(!came.has(n)){
         came.set(n,cur);
-        gScore.set(n,t);
-        if(!open.includes(n)) open.push(n);
+        queue.push(n);
       }
-    });
+    }
   }
-  return [];
+  const path=[];
+  let cur = goal;
+  while(cur){
+    path.unshift(cur);
+    cur = came.get(cur);
+  }
+  return path;
 }
 
 // ===== 近接ノード取得 =====
@@ -127,7 +125,7 @@ function nearestNode(){
     Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a);
 }
 
-// ===== 常に最寄り空きロッド =====
+// ===== 最寄り空きロッド =====
 function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
   if(emptyRods.length===0) return null;
@@ -159,17 +157,18 @@ window.addEventListener("keydown",e=>{
   recalcPath();
 });
 
-// ===== 軽量化: 経路は100msごとに再計算 =====
+// ===== 経路再計算（軽量化） =====
 let path=[];
 let lastGoal = null;
 function recalcPath(){
   const s = nearestNode();
   const g = nearestGoalNode();
-  if(!g || g === lastGoal) return;
+  if(!g || g===lastGoal) return;
   lastGoal = g;
-  path = astar(s,g);
+  path = calcPathBFS(s,g);
 }
-setInterval(recalcPath,100);
+// 300msごとに再計算
+setInterval(recalcPath,300);
 
 // ===== メインループ =====
 (function loop(){
