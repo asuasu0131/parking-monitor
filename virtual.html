@@ -2,23 +2,45 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>駐車場ナビ（擬似移動）</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>駐車場 空き状況ナビ（通路沿いA*誘導）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="style.css">
+<style>
+  /* 移動ボタン配置 */
+  #controller {
+    margin:10px auto;
+    text-align:center;
+  }
+  #controller button {
+    padding:8px 12px;
+    font-size:16px;
+    margin:2px;
+  }
+  /* Canvasがロッドやユーザーの下に隠れないように */
+  #path-canvas {
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:0;
+    pointer-events:none; /* クリック透過 */
+  }
+</style>
 </head>
 <body>
-<h1>駐車場ナビ（擬似移動・空/満切替可）</h1>
+<h1>駐車場ナビ（青線経路誘導版）</h1>
+
+<div id="controller">
+  <button id="up">↑</button><br>
+  <button id="left">←</button>
+  <button id="down">↓</button>
+  <button id="right">→</button>
+</div>
 
 <div id="parking-lot-container">
   <div id="parking-lot"></div>
+  <canvas id="path-canvas"></canvas>
   <div id="user-marker"></div>
   <div id="heading-arrow"></div>
-</div>
-
-<div id="controls">
-  <div></div><button class="move-btn" id="up">↑</button><div></div>
-  <button class="move-btn" id="left">←</button><div></div><button class="move-btn" id="right">→</button>
-  <div></div><button class="move-btn" id="down">↓</button><div></div>
 </div>
 
 <script src="virtual.js"></script>
