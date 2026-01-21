@@ -16,7 +16,7 @@ const colX = [
   0,                   // 通路 placeholder
   colWidth + colGap,    // 2列目左
   colWidth*2 + colGap,  // 2列目右
-  colWidth*2 + colGap + colWidth + colGap, // 通路 placeholder
+  colWidth*2 + colGap + colGap, // 通路 placeholder
   colWidth*3 + colGap*2 + colWidth // 4列目
 ];
 
