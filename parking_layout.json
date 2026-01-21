@@ -1,8 +1,8 @@
 [
-  {"id":"A1","x":null,"y":null,"status":0},
-  {"id":"A2","x":null,"y":null,"status":1},
-  {"id":"A3","x":null,"y":null,"status":0},
-  {"id":"B1","x":null,"y":null,"status":0},
-  {"id":"B2","x":null,"y":null,"status":1},
-  {"id":"B3","x":null,"y":null,"status":0}
+  {"id":"A1","x":120,"y":80,"status":0},
+  {"id":"A2","x":120,"y":200,"status":1},
+  {"id":"A3","x":120,"y":320,"status":0},
+  {"id":"B1","x":420,"y":80,"status":0},
+  {"id":"B2","x":420,"y":200,"status":1},
+  {"id":"B3","x":420,"y":320,"status":0}
 ]

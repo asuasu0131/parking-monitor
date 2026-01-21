@@ -85,3 +85,24 @@ r.element.style.top  = r.y + "px";
 lot.style.transform = `scale(${zoomScale})`;
 requestAnimationFrame(loop);
 })();
+
+const socket = io();
+
+document.getElementById("save-layout").onclick = async ()=>{
+  const saveData = rods.map(r=>({
+    id:r.id, x:r.x, y:r.y, status:r.status
+  }));
+
+  const res = await fetch("/save_layout", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(saveData)
+  });
+
+  if(res.ok){
+    alert("parking_layout.json に保存しました");
+    socket.emit("layout_updated");
+  }else{
+    alert("保存失敗");
+  }
+};
