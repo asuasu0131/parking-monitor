@@ -88,6 +88,23 @@ function initNodes() {
       Math.abs(o.row-n.row)+Math.abs(o.col-n.col) === 1
     );
   });
+
+  nodes.forEach(n => {
+  if (!n.targetRod) return;
+
+  // 同じ(row,col)にある通路ノードを探す
+  const corridor = nodes.find(o =>
+    o !== n &&
+    o.row === n.row &&
+    o.col === n.col &&
+    o.targetRod === null
+  );
+
+  if (corridor) {
+    n.neighbors.push(corridor);
+    corridor.neighbors.push(n);
+  }
+});
 }
 
 // ===== 座標 =====
