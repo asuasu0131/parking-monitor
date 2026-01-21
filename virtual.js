@@ -4,7 +4,7 @@ const canvas = document.getElementById("path-canvas");
 const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
-const rowCount = 9;
+const rowCount = 5; // ← ここを9から5に変更
 const colCount = 6;
 const colW = 70;
 const rowH = 50;
@@ -165,7 +165,6 @@ let lastGoal = null;
 function recalcPath(){
   const s = nearestNode();
   const g = nearestGoalNode();
-  // ゴールが変わったときのみ再計算
   if(!g || g === lastGoal) return;
   lastGoal = g;
   path = astar(s,g);
