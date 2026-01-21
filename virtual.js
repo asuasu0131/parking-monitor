@@ -1,48 +1,91 @@
-const lot = document.getElementById("parking-lot");
 const container = document.getElementById("parking-lot-container");
-const zoomSlider = document.getElementById("zoom-slider");
+const lot = document.getElementById("parking-lot");
+const userMarker = document.getElementById("user-marker");
+const headingArrow = document.getElementById("heading-arrow");
 
-let rods = [];
-let zoomScale = 1;
+// ===== 仮ロッド配置（4列×9行） =====
+const rods = [];
+const rowCount = 9;
+const colWidth = 70;
+const rowHeight = 50;
+const colGap = 40; // 通路幅
 
-const socket = io();
+// 列配置: 1列 / 通路 / 2列 / 通路 / 1列
+const colX = [0, 0, 70+colGap, 70+colGap+70, 70+colGap+70+70+colGap, 70+colGap+70+70+colGap+70];
 
-/* ===== JSON 読み込み ===== */
-async function loadLayout(){
-  const res = await fetch("/parking_layout.json");
-  rods = await res.json();
-  renderRods();
+for (let r = 0; r < rowCount; r++) {
+  rods.push({id:`A${r+1}`, x: colX[0], y: r*rowHeight, status:0});
+  rods.push({id:`B${r+1}`, x: colX[2], y: r*rowHeight, status:0});
+  rods.push({id:`C${r+1}`, x: colX[3], y: r*rowHeight, status:0});
+  rods.push({id:`D${r+1}`, x: colX[5], y: r*rowHeight, status:0});
 }
 
-/* ===== 描画 ===== */
+// ===== ユーザー初期位置（画面下中央） =====
+let user = {x: container.clientWidth/2, y: container.clientHeight-10};
+
+// ===== ロッド描画 =====
 function renderRods(){
   document.querySelectorAll(".rod").forEach(e=>e.remove());
-
   rods.forEach(r=>{
     const d = document.createElement("div");
-    d.className = "rod " + (r.status===0?"empty":"full");
-    d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
-
+    d.className="rod "+(r.status===0?"empty":"full");
     d.style.left = r.x + "px";
-    d.style.top  = r.y + "px";
-
+    d.style.top = r.y + "px";
+    d.innerHTML = r.id;
     lot.appendChild(d);
+    r.element=d;
+    d.onclick=()=>{
+      r.status = r.status===0?1:0;
+      d.className="rod "+(r.status===0?"empty":"full");
+    };
   });
 }
 
-/* ===== socket 更新通知 ===== */
-socket.on("layout_updated", loadLayout);
+// ===== 最短ロッドへの方向計算 =====
+function nearestRod(){
+  const emptyRods = rods.filter(r=>r.status===0);
+  if(emptyRods.length===0) return null;
+  let nearest = emptyRods[0];
+  let minDist = Math.hypot(user.x - nearest.x, user.y - nearest.y);
+  for(let r of emptyRods){
+    const dist = Math.hypot(user.x - r.x, user.y - r.y);
+    if(dist<minDist){
+      nearest=r;
+      minDist=dist;
+    }
+  }
+  return nearest;
+}
 
-/* ===== zoom ===== */
-zoomSlider.addEventListener("input", ()=>{
-  zoomScale = parseFloat(zoomSlider.value);
+// ===== 矢印更新 =====
+function updateArrow(){
+  const target = nearestRod();
+  if(!target) return;
+  const dx = target.x - user.x;
+  const dy = target.y - user.y;
+  const angle = Math.atan2(dy,dx)*180/Math.PI;
+  headingArrow.style.left = user.x+"px";
+  headingArrow.style.top = user.y+"px";
+  headingArrow.style.transform = `translate(-50%,-100%) rotate(${angle}deg)`;
+
+  userMarker.style.left = user.x+"px";
+  userMarker.style.top = user.y+"px";
+}
+
+// ===== 矢印キーで移動 =====
+const moveStep = 5;
+window.addEventListener("keydown", e=>{
+  switch(e.key){
+    case "ArrowUp": user.y-=moveStep; break;
+    case "ArrowDown": user.y+=moveStep; break;
+    case "ArrowLeft": user.x-=moveStep; break;
+    case "ArrowRight": user.x+=moveStep; break;
+  }
 });
 
-/* ===== 初期化 ===== */
-loadLayout();
-
-/* ===== 描画ループ ===== */
+// ===== ループ =====
 (function loop(){
-  lot.style.transform = `scale(${zoomScale})`;
+  renderRods();
+  updateArrow();
   requestAnimationFrame(loop);
 })();
