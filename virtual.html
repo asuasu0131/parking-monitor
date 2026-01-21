@@ -2,12 +2,41 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>駐車場ナビ（青線経路誘導 完全版）</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>駐車場ナビ（上下スペース付き・完全版）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
+<style>
+  #controller {
+    margin:10px auto;
+    text-align:center;
+  }
+  #controller button {
+    padding:8px 12px;
+    font-size:16px;
+    margin:2px;
+  }
+  #path-canvas {
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:0;
+    pointer-events:none;
+  }
+  #parking-lot-container {
+    max-width:900px;
+    width:90vw;
+    aspect-ratio:9/6.5;
+    margin:auto;
+    background:#bfbfbf;
+    position:relative;
+    border-radius:8px;
+    border:2px solid #888;
+    overflow:hidden;
+  }
+</style>
 </head>
 <body>
-<h1>駐車場ナビ（青線経路誘導 完全版）</h1>
+<h1>駐車場ナビ（上下スペース・完全版）</h1>
 
 <div id="controller">
   <button id="up">↑</button><br>
