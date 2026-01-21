@@ -166,9 +166,9 @@ function drawPath(path){
   ctx.moveTo(user.x,user.y);
   path.forEach(n => ctx.lineTo(n.x,n.y));
 
-  // 最後にロッド中心まで線を伸ばす
-  const goalRod = path.length ? path[path.length-1].targetRod : null;
-  if(goalRod) ctx.lineTo(goalRod.canvasX, goalRod.canvasY);
+  // **修正点**：最後にロッド中心ではなく、最後のノード位置で線を止める
+  // const goalRod = path.length ? path[path.length-1].targetRod : null;
+  // if(goalRod) ctx.lineTo(goalRod.canvasX, goalRod.canvasY);
 
   ctx.stroke();
 }
