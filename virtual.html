@@ -2,54 +2,61 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>駐車場ナビ（上下スペース付き・完全版）</title>
+<title>駐車場ナビ 完全修正版</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
 <style>
-  #controller {
-    margin:10px auto;
-    text-align:center;
-  }
-  #controller button {
-    padding:8px 12px;
-    font-size:16px;
-    margin:2px;
-  }
-  #path-canvas {
-    position:absolute;
-    top:0;
-    left:0;
-    z-index:2;
-    pointer-events:none;
-  }
-  #parking-lot-container {
-    max-width:900px;
-    width:90vw;
-    aspect-ratio:9/6.5;
-    margin:auto;
-    background:#bfbfbf;
-    position:relative;
-    border-radius:8px;
-    border:2px solid #888;
-    overflow:hidden;
-  }
+body { font-family:sans-serif; }
+
+#parking-lot-container{
+  width:90vw;
+  max-width:900px;
+  height:70vh;
+  margin:auto;
+  background:#bbb;
+  position:relative;
+  overflow:hidden;
+}
+
+#parking-lot{ position:absolute; inset:0; }
+
+#path-canvas{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+}
+
+.rod{
+  position:absolute;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  color:white;
+  border-radius:6px;
+}
+.empty{ background:#4caf50; }
+.full{ background:#f44336; }
+
+#user-marker{
+  width:12px;
+  height:12px;
+  background:black;
+  border-radius:50%;
+  position:absolute;
+  z-index:10;
+}
 </style>
 </head>
 <body>
-<h1>駐車場ナビ（上下スペース・完全版）</h1>
 
-<div id="controller">
-  <button id="up">↑</button><br>
-  <button id="left">←</button>
-  <button id="down">↓</button>
-  <button id="right">→</button>
-</div>
+<h2 style="text-align:center">駐車場ナビ（完全修正版）</h2>
 
 <div id="parking-lot-container">
   <div id="parking-lot"></div>
   <canvas id="path-canvas"></canvas>
   <div id="user-marker"></div>
-  <div id="heading-arrow"></div>
 </div>
 
 <script src="virtual.js"></script>

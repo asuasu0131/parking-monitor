@@ -3,160 +3,117 @@ const lot = document.getElementById("parking-lot");
 const canvas = document.getElementById("path-canvas");
 const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
-const headingArrow = document.getElementById("heading-arrow");
 
-// ===== 設定 =====
 const rowCount = 9;
 const colCount = 6;
-const colWidth = 70;
-const rowHeight = 50;
-const verticalPaddingRows = 1;
-const moveStep = 5;
+const colW = 70;
+const rowH = 50;
+const padRows = 1;
 
-// ===== ユーザー =====
-let user = { x: 0, y: 0 };
+let user = { x:0, y:0 };
 
 // ===== ロッド =====
-const rods = [];
-function initRods() {
-  for (let r = 0; r < rowCount; r++) {
-    rods.push({ id:`A${r+1}`, col:0, row:r, status:0 });
-    rods.push({ id:`B${r+1}`, col:2, row:r, status:0 });
-    rods.push({ id:`C${r+1}`, col:3, row:r, status:0 });
-    rods.push({ id:`D${r+1}`, col:5, row:r, status:0 });
-  }
-
-  rods.forEach(r => {
-    const d = document.createElement("div");
-    d.className = "rod empty";
-    d.style.width = colWidth+"px";
-    d.style.height = rowHeight+"px";
-    d.style.position = "absolute";
-    d.style.display = "flex";
-    d.style.alignItems = "center";
-    d.style.justifyContent = "center";
-    d.style.fontSize = "12px";
-    d.style.fontWeight = "bold";
-    d.style.color = "white";
-    d.innerHTML = r.id;
-
-    d.onclick = () => {
-      r.status = r.status === 0 ? 1 : 0;
-      d.className = "rod " + (r.status === 0 ? "empty" : "full");
-    };
-
-    lot.appendChild(d);
-    r.element = d;
+const rods=[];
+for(let r=0;r<rowCount;r++){
+  [["A",0],["B",2],["C",3],["D",5]].forEach(([k,c])=>{
+    rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
 }
-
-// ===== ノード =====
-const nodes = [];
-function initNodes() {
-  nodes.length = 0;
-  const totalRows = rowCount + verticalPaddingRows * 2;
-
-  // 通路ノード
-  for (let r = 0; r < totalRows; r++) {
-    for (let c = 0; c < colCount; c++) {
-      if (![0,2,3,5].includes(c)) {
-        nodes.push({ row:r, col:c, x:0, y:0, neighbors:[], targetRod:null });
-      }
-    }
-  }
-
-  // ロッド前ノード（1ロッド=1ノード）
-  rods.forEach(r => {
-    const nodeCol = (r.col === 0 || r.col === 2) ? 1 : 4;
-    const nodeRow = r.row + verticalPaddingRows;
-
-    const n = {
-      row: nodeRow,
-      col: nodeCol,
-      x:0,
-      y:0,
-      neighbors:[],
-      targetRod: r
-    };
-    nodes.push(n);
-    r.frontNode = n;
-  });
-
-  // 隣接
-  nodes.forEach(n => {
-    n.neighbors = nodes.filter(o =>
-      Math.abs(o.row-n.row)+Math.abs(o.col-n.col) === 1
-    );
-  });
-
-  nodes.forEach(n => {
-  if (!n.targetRod) return;
-
-  // 同じ(row,col)にある通路ノードを探す
-  const corridor = nodes.find(o =>
-    o !== n &&
-    o.row === n.row &&
-    o.col === n.col &&
-    o.targetRod === null
-  );
-
-  if (corridor) {
-    n.neighbors.push(corridor);
-    corridor.neighbors.push(n);
-  }
+rods.forEach(r=>{
+  const d=document.createElement("div");
+  d.className="rod empty";
+  d.style.width=colW+"px";
+  d.style.height=rowH+"px";
+  d.textContent=r.id;
+  d.onclick=()=>{
+    r.status^=1;
+    d.className="rod "+(r.status?"full":"empty");
+  };
+  lot.appendChild(d);
+  r.el=d;
 });
+
+// ===== ノード（Mapで一意化）=====
+const nodeMap=new Map();
+function key(r,c){return `${r},${c}`;}
+
+function getNode(r,c){
+  const k=key(r,c);
+  if(!nodeMap.has(k)){
+    nodeMap.set(k,{row:r,col:c,x:0,y:0,neighbors:[],rod:null});
+  }
+  return nodeMap.get(k);
 }
+
+// 通路
+for(let r=0;r<rowCount+padRows*2;r++){
+  for(let c=0;c<colCount;c++){
+    if(![0,2,3,5].includes(c)) getNode(r,c);
+  }
+}
+
+// ロッド前ノード（通路を流用）
+rods.forEach(r=>{
+  const nr=r.row+padRows;
+  const nc=(r.col<=2)?1:4;
+  const n=getNode(nr,nc);
+  n.rod=r;
+  r.front=n;
+});
+
+// 隣接
+nodeMap.forEach(n=>{
+  [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
+    const nb=nodeMap.get(key(n.row+dr,n.col+dc));
+    if(nb) n.neighbors.push(nb);
+  });
+});
+const nodes=[...nodeMap.values()];
 
 // ===== 座標 =====
-let offsetX=0, offsetY=0;
-function resizeCanvas() {
-  const rect = container.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+function resize(){
+  canvas.width=container.clientWidth;
+  canvas.height=container.clientHeight;
+  const offX=(canvas.width-colCount*colW)/2;
+  const offY=(canvas.height-(rowCount+padRows*2)*rowH)/2;
 
-  const totalRows = rowCount + verticalPaddingRows*2;
-  offsetX = (rect.width - colCount*colWidth)/2;
-  offsetY = (rect.height - totalRows*rowHeight)/2;
+  nodes.forEach(n=>{
+    n.x=offX+n.col*colW+colW/2;
+    n.y=offY+n.row*rowH+rowH/2;
+  });
 
-  if (!user.x && !user.y) {
-    user.x = rect.width/2;
-    user.y = rect.height - rowHeight/2;
+  rods.forEach(r=>{
+    r.cx=offX+r.col*colW+colW/2;
+    r.cy=offY+(r.row+padRows)*rowH+rowH/2;
+    r.el.style.left=r.cx-colW/2+"px";
+    r.el.style.top=r.cy-rowH/2+"px";
+  });
+
+  if(!user.x){
+    user.x=canvas.width/2;
+    user.y=canvas.height-rowH;
   }
-
-  rods.forEach(r => {
-    r.canvasX = offsetX + r.col*colWidth + colWidth/2;
-    r.canvasY = offsetY + verticalPaddingRows*rowHeight + r.row*rowHeight + rowHeight/2;
-    r.element.style.left = (r.canvasX-colWidth/2)+"px";
-    r.element.style.top  = (r.canvasY-rowHeight/2)+"px";
-  });
-
-  nodes.forEach(n => {
-    n.x = offsetX + n.col*colWidth + colWidth/2;
-    n.y = offsetY + n.row*rowHeight + rowHeight/2;
-  });
 }
+resize();
+window.addEventListener("resize",resize);
 
 // ===== A* =====
-function heuristic(a,b){ return Math.abs(a.row-b.row)+Math.abs(a.col-b.col); }
-function astar(start,goal){
-  const open=[start], came=new Map(), g=new Map(), f=new Map();
-  g.set(start,0); f.set(start,heuristic(start,goal));
-
+function h(a,b){return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
+function astar(s,g){
+  const open=[s],came=new Map(),gScore=new Map([[s,0]]);
   while(open.length){
-    open.sort((a,b)=>(f.get(a)||1e9)-(f.get(b)||1e9));
+    open.sort((a,b)=>(gScore.get(a)+h(a,g))-(gScore.get(b)+h(b,g)));
     const cur=open.shift();
-    if(cur===goal){
-      const path=[];
-      let c=cur;
-      while(c){ path.unshift(c); c=came.get(c); }
-      return path;
+    if(cur===g){
+      const p=[]; let c=cur;
+      while(c){p.unshift(c);c=came.get(c);}
+      return p;
     }
     cur.neighbors.forEach(n=>{
-      const t=(g.get(cur)||1e9)+1;
-      if(t<(g.get(n)||1e9)){
+      const t=gScore.get(cur)+1;
+      if(t<(gScore.get(n)||1e9)){
         came.set(n,cur);
-        g.set(n,t);
-        f.set(n,t+heuristic(n,goal));
+        gScore.set(n,t);
         if(!open.includes(n)) open.push(n);
       }
     });
@@ -164,68 +121,48 @@ function astar(start,goal){
   return [];
 }
 
-// ===== ゴール =====
-function nearestRodNode(){
-  const empties = rods.filter(r=>r.status===0);
-  if(!empties.length) return null;
-
-  let best=empties[0];
-  let dmin=Math.hypot(user.x-best.canvasX,user.y-best.canvasY);
-  empties.forEach(r=>{
-    const d=Math.hypot(user.x-r.canvasX,user.y-r.canvasY);
-    if(d<dmin){ best=r; dmin=d; }
-  });
-  return best.frontNode;
+// ===== 経路 =====
+function nearestNode(){
+  return nodes.reduce((a,b)=>
+    Math.hypot(b.x-user.x,b.y-user.y)<
+    Math.hypot(a.x-user.x,a.y-user.y)?b:a);
+}
+function goalNode(){
+  const e=rods.filter(r=>!r.status);
+  if(!e.length) return null;
+  return e.reduce((a,b)=>
+    Math.hypot(b.cx-user.x,b.cy-user.y)<
+    Math.hypot(a.cx-user.x,a.cy-user.y)?b:a).front;
 }
 
 // ===== 描画 =====
-let currentPath=[];
-function drawPath(path){
+function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!path.length) return;
+  if(!p.length) return;
   ctx.strokeStyle="blue";
   ctx.lineWidth=4;
   ctx.beginPath();
   ctx.moveTo(user.x,user.y);
-  path.forEach(n=>ctx.lineTo(n.x,n.y));
+  p.forEach(n=>ctx.lineTo(n.x,n.y));
   ctx.stroke();
 }
 
-// ===== 矢印 =====
-function updateArrow(){
-  if(currentPath.length){
-    const n=currentPath[0];
-    const a=Math.atan2(n.y-user.y,n.x-user.x)*180/Math.PI;
-    headingArrow.style.left=user.x+"px";
-    headingArrow.style.top=user.y+"px";
-    headingArrow.style.transform=`translate(-50%,-100%) rotate(${a}deg)`;
+// ===== ループ =====
+window.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp")user.y-=5;
+  if(e.key==="ArrowDown")user.y+=5;
+  if(e.key==="ArrowLeft")user.x-=5;
+  if(e.key==="ArrowRight")user.x+=5;
+});
+
+(function loop(){
+  const s=nearestNode();
+  const g=goalNode();
+  if(g){
+    const p=astar(s,g);
+    draw(p);
   }
   userMarker.style.left=user.x+"px";
   userMarker.style.top=user.y+"px";
-}
-
-// ===== 操作 =====
-const mv={ArrowUp:()=>user.y-=moveStep,ArrowDown:()=>user.y+=moveStep,
-          ArrowLeft:()=>user.x-=moveStep,ArrowRight:()=>user.x+=moveStep};
-Object.keys(mv).forEach(k=>{
-  document.getElementById(k.replace("Arrow","").toLowerCase()).onclick=mv[k];
-});
-window.addEventListener("keydown",e=>mv[e.key]?.());
-
-// ===== ループ =====
-function loop(){
-  const start=nodes.reduce((p,c)=>
-    Math.hypot(c.x-user.x,c.y-user.y)<Math.hypot(p.x-user.x,p.y-user.y)?c:p,nodes[0]);
-  const goal=nearestRodNode();
-  if(goal) currentPath=astar(start,goal);
-  drawPath(currentPath);
-  updateArrow();
   requestAnimationFrame(loop);
-}
-
-// ===== 初期化 =====
-initRods();
-initNodes();
-resizeCanvas();
-loop();
-window.addEventListener("resize",resizeCanvas);
+})();
