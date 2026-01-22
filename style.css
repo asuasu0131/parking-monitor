@@ -1,31 +1,21 @@
 body {
   font-family: sans-serif;
   text-align: center;
+  padding: 10px;
   margin: 0;
   background: #f0f0f0;
 }
 
 #parking-lot-container {
   position: relative;
-  width: 90vw;
-  max-width: 900px;
-  height: 70vh;
-  margin: auto;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 9/6.5;
+  margin: 20px auto;
   background: #bfbfbf;
   overflow: hidden;
   border-radius: 8px;
-}
-
-#parking-lot {
-  position: absolute;
-  inset: 0;
-}
-
-#path-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
+  border: 2px solid #888;
 }
 
 .rod {
@@ -35,9 +25,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 12px;
   font-weight: bold;
   color: white;
-  border-radius: 6px;
+  border: 1px solid #fff;
   cursor: pointer;
 }
 
@@ -46,27 +37,31 @@ body {
 
 #user-marker {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  background: black;
+  width: 20px;
+  height: 20px;
+  background: #2196f3;
   border-radius: 50%;
-  z-index: 10;
-}
-
-#policy-panel {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  border: 2px solid white;
+  transform: translate(-50%, -50%);
   z-index: 100;
 }
 
-#policyBtn {
+#heading-arrow {
+  position: absolute;
+  width: 2px;
+  height: 30px;
+  background: red;
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%) rotate(0deg);
+  z-index: 101;
+}
+
+#controller {
+  margin: 10px auto;
+}
+
+#controller button {
   padding: 8px 12px;
-  font-size: 14px;
-  font-weight: bold;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background: #1976d2;
-  color: white;
+  font-size: 16px;
+  margin: 2px;
 }

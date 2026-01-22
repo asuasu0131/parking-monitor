@@ -4,18 +4,83 @@
 <meta charset="utf-8">
 <title>駐車場ナビ 完全版</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css">
+<style>
+body { font-family:sans-serif; margin:0; background:#f0f0f0; }
+
+#policy-panel {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+#policyBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #1976d2;
+  color: white;
+}
+
+#policyBtn:hover {
+  background: #1565c0;
+}
+
+#parking-lot-container{
+  width:90vw;
+  max-width:900px;
+  height:70vh;
+  margin:auto;
+  background:#bbb;
+  position:relative;
+  overflow:hidden;
+}
+
+#parking-lot{ position:absolute; inset:0; }
+
+#path-canvas{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+}
+
+.rod{
+  position:absolute;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+.empty{ background:#4caf50; }
+.full{ background:#f44336; }
+
+#user-marker{
+  width:12px;
+  height:12px;
+  background:black;
+  border-radius:50%;
+  position:absolute;
+  z-index:10;
+}
+</style>
 </head>
 <body>
 
-<h2>駐車場ナビ（完全版）</h2>
+<h2 style="text-align:center">駐車場ナビ（完全版）</h2>
 
 <div id="parking-lot-container">
   <div id="parking-lot"></div>
   <canvas id="path-canvas"></canvas>
   <div id="user-marker"></div>
 </div>
-
+<!-- ポリシー切り替えボタン -->
 <div id="policy-panel">
   <button id="policyBtn">案内方式：nearest</button>
 </div>
