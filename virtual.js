@@ -40,7 +40,7 @@ const nodeMap = new Map();
 function key(r,c){ return `${r},${c}`; }
 function getNode(r,c){
   if(!nodeMap.has(key(r,c))){
-    nodeMap.set(key(r,c),{row:r,col:c,x:0,y:0,neighbors:[],rod:null});
+    nodeMap.set(key(r,c),{row:r,col:c,x:0,y:0,neighbors:[],rod:null,priority:false});
   }
   return nodeMap.get(key(r,c));
 }
@@ -48,7 +48,13 @@ function getNode(r,c){
 // 通路ノード作成（ロッドを避ける）
 for(let r=0;r<rowCount+padRows*2;r++){
   for(let c=0;c<colCount;c++){
-    if(![0,2,3,5].includes(c)) getNode(r,c);
+    if(![0,2,3,5].includes(c)){
+      const n = getNode(r,c);
+      // 外周黄色セルを優先ノードとしてマーク
+      if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount-1){
+        n.priority = true;
+      }
+    }
   }
 }
 
@@ -128,7 +134,7 @@ function nearestNode(){
   );
 }
 
-// ===== 最寄り空きロッド =====
+// ===== 最寄り空きロッド前ノード =====
 function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
   if(emptyRods.length===0) return null;
@@ -136,6 +142,23 @@ function nearestGoalNode(){
     Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
   );
   return nearestRod.front;
+}
+
+// ===== 外周優先経路計算 =====
+function calcPathViaPriority(start,goal){
+  if(!start || !goal) return [];
+  // 優先ノード（黄色セル）を一番近いものを取得
+  const priorityNodes = nodes.filter(n=>n.priority);
+  if(priorityNodes.length===0) return calcPathBFS(start,goal);
+
+  let nearestPriority = priorityNodes.reduce((a,b)=>
+    Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
+  );
+
+  const path1 = calcPathBFS(start,nearestPriority);
+  const path2 = calcPathBFS(nearestPriority,goal);
+
+  return [...path1,...path2.slice(1)]; // 2つ目のpathは重複ノードを削除
 }
 
 // ===== 描画 =====
@@ -184,7 +207,7 @@ function recalcPath(){
   const g = nearestGoalNode();
   if(!g || g===lastGoal) return;
   lastGoal = g;
-  path = calcPathBFS(s,g);
+  path = calcPathViaPriority(s,g);
 }
 setInterval(recalcPath,300);
 
