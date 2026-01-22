@@ -2,63 +2,150 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>駐車場ナビ 完全修正版</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css">
+<title>駐車場ナビ（ロッド横切りなし）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body { font-family:sans-serif; }
-
-#parking-lot-container{
-  width:90vw;
-  max-width:900px;
-  height:70vh;
-  margin:auto;
-  background:#bbb;
-  position:relative;
-  overflow:hidden;
-}
-
-#parking-lot{ position:absolute; inset:0; }
-
-#path-canvas{
-  position:absolute;
-  inset:0;
-  z-index:5;
-  pointer-events:none;
-}
-
-.rod{
-  position:absolute;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-  color:white;
-  border-radius:6px;
-}
-.empty{ background:#4caf50; }
-.full{ background:#f44336; }
-
-#user-marker{
-  width:12px;
-  height:12px;
-  background:black;
-  border-radius:50%;
-  position:absolute;
-  z-index:10;
-}
+  body { margin:0; background:#eee; }
+  canvas { background:#fff; display:block; margin:auto; }
 </style>
 </head>
 <body>
 
-<h2 style="text-align:center">駐車場ナビ（完全修正版）</h2>
+<canvas id="c" width="600" height="400"></canvas>
 
-<div id="parking-lot-container">
-  <div id="parking-lot"></div>
-  <canvas id="path-canvas"></canvas>
-  <div id="user-marker"></div>
-</div>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
 
-<script src="virtual.js"></script>
+/* =========================
+   通路ノード定義（格子）
+========================= */
+const nodes = [];
+const step = 50;
+
+for(let y=50;y<=350;y+=step){
+  for(let x=50;x<=550;x+=step){
+    nodes.push({x,y});
+  }
+}
+
+/* =========================
+   ロッド定義（前ノードのみ）
+========================= */
+const rods = [
+  {x:150,y:50},
+  {x:300,y:50},
+  {x:450,y:50},
+  {x:150,y:350},
+  {x:300,y:350},
+  {x:450,y:350},
+];
+
+/* =========================
+   ユーザー位置（仮）
+========================= */
+let user = {x:120,y:200};
+
+/* =========================
+   最寄り通路ノード
+========================= */
+function nearestNode(pos){
+  let min=1e9, best=null;
+  for(const n of nodes){
+    const d=(n.x-pos.x)**2+(n.y-pos.y)**2;
+    if(d<min){ min=d; best=n; }
+  }
+  return best;
+}
+
+/* =========================
+   BFS（通路ノードのみ）
+========================= */
+function bfs(start,goal){
+  const q=[start];
+  const prev=new Map();
+  prev.set(start,null);
+
+  while(q.length){
+    const n=q.shift();
+    if(n===goal) break;
+
+    for(const m of nodes){
+      if(prev.has(m)) continue;
+      if(Math.abs(n.x-m.x)+Math.abs(n.y-m.y)===step){
+        prev.set(m,n);
+        q.push(m);
+      }
+    }
+  }
+
+  const path=[];
+  let cur=goal;
+  while(cur){
+    path.unshift(cur);
+    cur=prev.get(cur);
+  }
+  return path;
+}
+
+/* =========================
+   一番近いロッドを選択
+========================= */
+function nearestRod(from){
+  let min=1e9,best=null;
+  for(const r of rods){
+    const d=(r.x-from.x)**2+(r.y-from.y)**2;
+    if(d<min){min=d;best=r;}
+  }
+  return best;
+}
+
+/* =========================
+   描画
+========================= */
+function draw(path){
+  ctx.clearRect(0,0,600,400);
+
+  /* 通路 */
+  ctx.fillStyle="#ccc";
+  nodes.forEach(n=>ctx.fillRect(n.x-3,n.y-3,6,6));
+
+  /* ロッド */
+  ctx.fillStyle="black";
+  rods.forEach(r=>ctx.fillRect(r.x-10,r.y-10,20,20));
+
+  /* 経路（通路のみ） */
+  if(path.length>1){
+    ctx.strokeStyle="blue";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.moveTo(path[0].x,path[0].y);
+    for(let i=1;i<path.length;i++){
+      ctx.lineTo(path[i].x,path[i].y);
+    }
+    ctx.stroke();
+  }
+
+  /* ユーザー */
+  ctx.fillStyle="red";
+  ctx.beginPath();
+  ctx.arc(user.x,user.y,6,0,Math.PI*2);
+  ctx.fill();
+}
+
+/* =========================
+   メイン処理
+========================= */
+function update(){
+  const start = nearestNode(user);
+  const rod   = nearestRod(start);
+  const goal  = nearestNode(rod);
+
+  const path = bfs(start,goal);
+  draw(path);
+}
+
+update();
+</script>
 </body>
 </html>
