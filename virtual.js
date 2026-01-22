@@ -166,53 +166,53 @@ function nearestNode(){
   );
 }
 
+// ===== 選択ポリシー切替 =====
+let selectionPolicy = "nearest"; // "nearest" or "entrance"
+const entranceNode = getNode(0,1); // A1ロッドの上側
+
+function getBestRod(emptyRods){
+  if(emptyRods.length === 0) return null;
+  if(selectionPolicy==="nearest"){
+    return emptyRods.reduce((a,b)=>
+      Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
+    );
+  } else {
+    return emptyRods.reduce((a,b)=>
+      Math.hypot(b.front.x-entranceNode.x,b.front.y-entranceNode.y) < Math.hypot(a.front.x-entranceNode.x,a.front.y-entranceNode.y) ? b : a
+    );
+  }
+}
+
 // ===== 最寄り空きロッド前ノード（左右通路別） =====
 function nearestGoalNode(){
-  const emptyLeft = rods.filter(r=>!r.status && (r.col===rodCols[0] || r.col===rodCols[1])).map(r=>r.front);
-  const emptyRight = rods.filter(r=>!r.status && (r.col===rodCols[2] || r.col===rodCols[3])).map(r=>r.front);
-
+  const emptyLeft = rods.filter(r=>!r.status && (r.col===rodCols[0] || r.col===rodCols[1]));
+  const emptyRight = rods.filter(r=>!r.status && (r.col===rodCols[2] || r.col===rodCols[3]));
   return {left: emptyLeft, right: emptyRight};
 }
 
-// ===== 優先ノード経由経路計算（左右分け） =====
+// ===== 経路計算（左右通路＋優先ノード経由＋選択ポリシー） =====
 function calcPath(start){
   const empty = nearestGoalNode();
   const priorityNodes = nodes.filter(n=>n.priority);
   let path=[];
 
-  // 右側空きがあれば右優先
-  if(empty.right.length>0){
-    // 右通路優先ノード（8,5）経由
-    const pri = priorityNodes.find(n=>n.col===5) || priorityNodes[0];
-    let bestGoal = null;
-    let minDist = Infinity;
-    empty.right.forEach(g=>{
-      const p1 = calcPathBFS(start, pri);
-      const p2 = calcPathBFS(pri, g);
-      const dist = p1.length+p2.length;
-      if(dist<minDist){ minDist=dist; bestGoal=g; }
-    });
-    const p1 = calcPathBFS(start, pri);
-    const p2 = calcPathBFS(pri, bestGoal);
-    path=[...p1, ...p2.slice(1)];
+  // ユーザー位置で左右優先決定
+  const centerX = (nodes.find(n=>n.col===2).x + nodes.find(n=>n.col===5).x)/2;
+  const preferSide = (user.x>centerX) ? "right" : "left";
+
+  let targetRods = (preferSide==="right") ? empty.right : empty.left;
+  if(targetRods.length===0){
+    targetRods = (preferSide==="right") ? empty.left : empty.right;
   }
-  // 右側満車なら左側案内
-  else if(empty.left.length>0){
-    const pri = priorityNodes.find(n=>n.col===2) || priorityNodes[0];
-    let bestGoal = null;
-    let minDist = Infinity;
-    empty.left.forEach(g=>{
-      const p1 = calcPathBFS(start, pri);
-      const p2 = calcPathBFS(pri, g);
-      const dist = p1.length+p2.length;
-      if(dist<minDist){ minDist=dist; bestGoal=g; }
-    });
-    const p1 = calcPathBFS(start, pri);
-    const p2 = calcPathBFS(pri, bestGoal);
+
+  if(targetRods.length>0){
+    const bestRod = getBestRod(targetRods);
+    const priNode = priorityNodes.find(n=>n.col===bestRod.front.col) || priorityNodes[0];
+    const p1 = calcPathBFS(start, priNode);
+    const p2 = calcPathBFS(priNode, bestRod.front);
     path=[...p1, ...p2.slice(1)];
-  }
-  // 空きなし → 両方優先ノードまで
-  else{
+  } else {
+    // 空きなしは両方優先ノードまで
     path = priorityNodes.map(n=>calcPathBFS(start,n)).reduce((a,b)=>b.length>a.length?b:a,[]);
   }
 
@@ -223,7 +223,6 @@ function calcPath(start){
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ロッド描画
   rods.forEach(r=>{
     ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
     ctx.fillRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
@@ -236,7 +235,6 @@ function draw(p){
     ctx.fillText(r.id,r.cx,r.cy);
   });
 
-  // 経路描画
   if(p && p.length){
     ctx.strokeStyle="blue";
     ctx.lineWidth=4;
@@ -264,6 +262,12 @@ function recalcPath(){
   path = calcPath(s);
 }
 setInterval(recalcPath,300);
+
+// ===== ポリシー切替ボタン（例） =====
+document.getElementById("policyBtn")?.addEventListener("click",()=>{
+  selectionPolicy = (selectionPolicy==="nearest") ? "entrance" : "nearest";
+  recalcPath();
+});
 
 // ===== メインループ =====
 (function loop(){
