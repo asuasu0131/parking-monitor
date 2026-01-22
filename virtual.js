@@ -200,33 +200,44 @@ function nearestGoalNode(){
     );
   }
 
-  // 空きロッドがある場合は最寄り空きロッド前ノードを返す
-  let nearestRod = emptyRods.reduce((a,b)=>
-    Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
-  );
-  return nearestRod.front;
+  // 空きロッドがある場合は候補リストを返す
+  return emptyRods.map(r => r.front);
 }
 
-// ===== 外周優先経路（優先ノード経由） =====
-function calcPathViaPriority(start,goal){
-  if(!start || !goal) return [];
+// ===== 外周優先経路（優先ノード経由、最短距離の空きロッドを選択） =====
+function calcPathViaPriority(start,goalNodes){
+  if(!start || !goalNodes || goalNodes.length === 0) return [];
 
-  // 優先ノード（黄色）を通すかどうか
   const priorityNodes = nodes.filter(n=>n.priority);
-  if(priorityNodes.length === 0) return calcPathBFS(start,goal);
+  if(priorityNodes.length === 0){
+    // 優先ノードがない場合は、単純に最短距離の空きロッド前ノードへ
+    return calcPathBFS(start, goalNodes[0]);
+  }
 
-  // 現在位置に最も近い優先ノードを取得
+  // 現在位置から最も近い優先ノード
   const nearestPriority = priorityNodes.reduce((a,b)=>
     Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
   );
 
-  // 経路計算
-  let pathToPriority = calcPathBFS(start, nearestPriority);
-  let pathToGoal = calcPathBFS(nearestPriority, goal);
+  // 空きロッド前ノードの中から優先ノード経由で最短距離のノードを選ぶ
+  let bestGoal = null;
+  let minDist = Infinity;
+  goalNodes.forEach(g=>{
+    const pathToPriority = calcPathBFS(start, nearestPriority);
+    const pathToGoal = calcPathBFS(nearestPriority, g);
+    const totalDist = pathToPriority.length + pathToGoal.length;
+    if(totalDist < minDist){
+      minDist = totalDist;
+      bestGoal = g;
+    }
+  });
 
-  // 優先ノードが経路にすでに含まれている場合は重複を避ける
+  // 経路計算
+  const pathToPriority = calcPathBFS(start, nearestPriority);
+  const pathToGoal = calcPathBFS(nearestPriority, bestGoal);
   return [...pathToPriority, ...pathToGoal.slice(1)];
 }
+
 
 // ===== 描画 =====
 function draw(p){
@@ -268,16 +279,14 @@ window.addEventListener("keydown",e=>{
 
 // ===== 経路再計算 =====
 let path=[];
-let lastGoal = null;
 function recalcPath(){
   const s = nearestNode();
-  const g = nearestGoalNode();
-  if(!g) {
+  const gNodes = nearestGoalNode(); // 配列として取得
+  if(!gNodes || gNodes.length===0){
     path = [];
     return;
   }
-  // lastGoalによる早期リターンは削除
-  path = calcPathViaPriority(s,g);
+  path = calcPathViaPriority(s,gNodes);
 }
 setInterval(recalcPath,300);
 
