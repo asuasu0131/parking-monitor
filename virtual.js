@@ -4,20 +4,21 @@ const canvas = document.getElementById("path-canvas");
 const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
-const rowCount = 5;
-const colCount = 6;
+// ===== 駐車場設定 =====
+const rowCount = 5;   // 駐車スペース行数
+const colCount = 6;   // 駐車スペース列数
+const padRows = 1;    // 外周通路分
 const colW = 70;
 const rowH = 50;
-const padRows = 1;
 let user = { x:0, y:0 };
 
-// ===== ロッド =====
+// ===== ロッド作成 =====
 const rods=[];
 for(let r=0;r<rowCount;r++){
   [["A",0],["B",2],["C",3],["D",5]].forEach(([k,c])=>{
     rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
-}
+});
 
 // ロッドDOM作成
 rods.forEach(r=>{
@@ -35,7 +36,7 @@ rods.forEach(r=>{
   r.el=d;
 });
 
-// ===== ノード =====
+// ===== ノード作成 =====
 const nodeMap = new Map();
 function key(r,c){ return `${r},${c}`; }
 function getNode(r,c){
@@ -46,12 +47,13 @@ function getNode(r,c){
 }
 
 // 通路ノード作成（ロッドを避ける）
-for(let r=0;r<rowCount+padRows*2;r++){
-  for(let c=0;c<colCount;c++){
-    if(![0,2,3,5].includes(c)){
+for(let r=0;r<rowCount + padRows*2; r++){
+  for(let c=0;c<colCount + padRows*2; c++){
+    const innerCol = c - padRows;
+    if(![0,2,3,5].includes(innerCol)){
       const n = getNode(r,c);
-      // 外周黄色セルを優先ノードとしてマーク
-      if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount-1){
+      // 外周ノードは優先ノード
+      if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
         n.priority = true;
       }
     }
@@ -60,8 +62,8 @@ for(let r=0;r<rowCount+padRows*2;r++){
 
 // ロッド前ノード
 rods.forEach(r=>{
-  const nr = r.row+padRows;
-  const nc = (r.col<=2)?1+padRows : 4+padRows; // ロッド左 or 右の通路に接続
+  const nr = r.row + padRows;
+  const nc = (r.col <= 2) ? 1+padRows : 4+padRows;
   const n = getNode(nr,nc);
   n.rod = r;
   r.front = n;
@@ -74,12 +76,12 @@ nodeMap.forEach(n=>{
     if(nb) n.neighbors.push(nb);
   });
 });
-const nodes=[...nodeMap.values()];
+const nodes = [...nodeMap.values()];
 
 // ===== 座標設定 =====
 function resize(){
-  canvas.width=container.clientWidth;
-  canvas.height=container.clientHeight;
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
 
   const totalCols = colCount + padRows*2;
   const totalRows = rowCount + padRows*2;
@@ -130,7 +132,7 @@ function calcPathBFS(start,goal){
   return path;
 }
 
-// ===== 近接ノード取得（通路ノードのみ） =====
+// ===== 近接ノード取得 =====
 function nearestNode(){
   return nodes.reduce((a,b)=>
     Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
@@ -147,28 +149,30 @@ function nearestGoalNode(){
   return nearestRod.front;
 }
 
-// ===== 外周優先経路計算 =====
-function calcPathViaPriority(start,goal){
+// ===== 外周優先経路 =====
+function calcPathViaPriority(start, goal){
   if(!start || !goal) return [];
-  // 優先ノード（黄色セル）を一番近いものを取得
-  const priorityNodes = nodes.filter(n=>n.priority);
-  if(priorityNodes.length===0) return calcPathBFS(start,goal);
+
+  const priorityNodes = nodes.filter(n => n.priority);
+  if(priorityNodes.length === 0) return calcPathBFS(start, goal) || [];
 
   let nearestPriority = priorityNodes.reduce((a,b)=>
     Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
   );
 
-  const path1 = calcPathBFS(start,nearestPriority);
-  const path2 = calcPathBFS(nearestPriority,goal);
+  const path1 = calcPathBFS(start, nearestPriority) || [];
+  const path2 = calcPathBFS(nearestPriority, goal) || [];
 
-  return [...path1,...path2.slice(1)]; // 2つ目のpathは重複ノードを削除
+  if(path1.length && path2.length){
+    return [...path1, ...path2.slice(1)];
+  }
+  return [...path1, ...path2];
 }
 
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ロッド描画
   rods.forEach(r=>{
     ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
     ctx.fillRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
@@ -181,7 +185,6 @@ function draw(p){
     ctx.fillText(r.id,r.cx,r.cy);
   });
 
-  // 経路描画
   if(p && p.length){
     ctx.strokeStyle="blue";
     ctx.lineWidth=4;
