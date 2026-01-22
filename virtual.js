@@ -5,8 +5,8 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 5;   // 駐車スペース行数
-const colCount = 6;   // 駐車スペース列数
+const rowCount = 7;   // 駐車スペース行数
+const colCount = 8;   // 駐車スペース列数
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
@@ -16,10 +16,10 @@ let user = { x:0, y:0 };
 // ===== ロッド作成 =====
 const rods=[];
 for(let r=0;r<rowCount;r++){
-  [["A",0],["B",2],["C",3],["D",5]].forEach(([k,c])=>{
+  [["A",0],["B",2],["C",5],["D",7]].forEach(([k,c])=>{
     rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
-};
+}
 
 // ロッドDOM作成
 rods.forEach(r=>{
@@ -51,7 +51,7 @@ function getNode(r,c){
 for(let r=0;r<rowCount + padRows*2; r++){
   for(let c=0;c<colCount + padRows*2; c++){
     const innerCol = c - padRows;
-    if(![0,2,3,5].includes(innerCol)){
+    if(![0,2,5,7].includes(innerCol)){
       const n = getNode(r,c);
       if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
         n.priority = true;
@@ -88,8 +88,6 @@ container.appendChild(nodeCanvas);
 const nodeCtx = nodeCanvas.getContext("2d");
 
 function drawNodes(){
-  nodeCanvas.width = container.clientWidth;
-  nodeCanvas.height = container.clientHeight;
   nodeCtx.clearRect(0,0,nodeCanvas.width,nodeCanvas.height);
   nodes.forEach(n=>{
     nodeCtx.beginPath();
@@ -121,9 +119,11 @@ function resize(){
     n.y = offY + n.row*rowH + rowH/2;
   });
 
+  // ロッドのUIを左に1列ずらしてノードの通路に揃える
   rods.forEach(r=>{
-    r.cx = offX + r.col*colW + colW/2;
-    r.cy = offY + (r.row+padRows)*rowH + rowH/2;
+    const rodColOffset = 1;
+    r.cx = offX + (r.col + rodColOffset)*colW + colW/2;
+    r.cy = offY + (r.row + padRows)*rowH + rowH/2;
     r.el.style.left = (r.cx-colW/2) + "px";
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
@@ -195,6 +195,7 @@ function calcPathViaPriority(start,goal){
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
   // ロッド描画
   rods.forEach(r=>{
     ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
