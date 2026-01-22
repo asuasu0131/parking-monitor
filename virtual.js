@@ -18,6 +18,8 @@ for(let r=0;r<rowCount;r++){
     rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
 }
+
+// ロッドDOM作成
 rods.forEach(r=>{
   const d=document.createElement("div");
   d.className="rod empty";
@@ -95,7 +97,7 @@ function resize(){
 resize();
 window.addEventListener("resize",resize);
 
-// ===== BFSで最寄り空きロッドまで経路計算（軽量） =====
+// ===== BFS経路計算 =====
 function calcPathBFS(start,goal){
   if(!start || !goal) return [];
   const queue = [start];
@@ -138,13 +140,29 @@ function nearestGoalNode(){
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!p || !p.length) return;
-  ctx.strokeStyle="blue";
-  ctx.lineWidth=4;
-  ctx.beginPath();
-  ctx.moveTo(user.x,user.y);
-  p.forEach(n=>ctx.lineTo(n.x,n.y));
-  ctx.stroke();
+
+  // ロッド描画
+  rods.forEach(r=>{
+    ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
+    ctx.fillRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
+    ctx.strokeStyle="#000";
+    ctx.strokeRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
+    ctx.fillStyle="#fff";
+    ctx.font="bold 12px sans-serif";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(r.id,r.cx,r.cy);
+  });
+
+  // 経路線描画
+  if(p && p.length){
+    ctx.strokeStyle="blue";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.moveTo(user.x,user.y);
+    p.forEach(n=>ctx.lineTo(n.x,n.y));
+    ctx.stroke();
+  }
 }
 
 // ===== ユーザー操作 =====
@@ -157,7 +175,7 @@ window.addEventListener("keydown",e=>{
   recalcPath();
 });
 
-// ===== 経路再計算（軽量化） =====
+// ===== 経路再計算 =====
 let path=[];
 let lastGoal = null;
 function recalcPath(){
@@ -167,7 +185,6 @@ function recalcPath(){
   lastGoal = g;
   path = calcPathBFS(s,g);
 }
-// 300msごとに再計算
 setInterval(recalcPath,300);
 
 // ===== メインループ =====
