@@ -5,7 +5,7 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 8;   // 行数
+const rowCount = 8;   // 行数（1始まり）
 const colCount = 8;   // 列数（通路+ロッド込み）
 const padRows = 1;    // 外周通路
 const colW = 70;
@@ -19,9 +19,9 @@ const rodCols = [1,3,4,6];
 
 // ===== ロッド作成 =====
 const rods=[];
-for(let r=0;r<rowCount;r++){
+for(let r=1;r<=rowCount;r++){
   [["A",rodCols[0]],["B",rodCols[1]],["C",rodCols[2]],["D",rodCols[3]]].forEach(([k,c])=>{
-    rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
+    rods.push({id:`${k}${r}`,row:r,col:c,status:0});
   });
 }
 
@@ -51,35 +51,31 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
+// ノードの座標指定（優先ノードやロッド前ノード）
 const nodePositions = [
-  [8,2],[8,5],                       // 優先ノード（黄色）
-  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],  // 左ロッド前ノード（水色）
-  [1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],  // 右ロッド前ノード（水色）
+  [0,2],[0,5],                  // 外周優先ノード（黄色）
+  [1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],  // 左ロッド前ノード（青）
+  [1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],  // 左ロッド前ノード（青）
+  [1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[7,4],  // 右ロッド前ノード（青）
+  [1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6],  // 右ロッド前ノード（青）
 ];
 
 nodePositions.forEach(([r,c])=>{
   const n = getNode(r,c);
-  // 外周の場合は優先ノードにする
-  if(r===8){
-    n.priority = true;  // 黄色
-  } else {
-    n.priority = false; // 水色
-  }
+  // 0行目は優先ノード（黄色）
+  n.priority = r===0;
 });
 
-// ===== ロッド前ノードを割り当て =====
+// ===== ロッド前ノード割り当て =====
 rods.forEach(r=>{
-  // 左ロッドは左通路のノード、右ロッドは右通路のノード
-  const nr = r.row;
-  let nc;
+  let frontNode;
   if(r.col === rodCols[0] || r.col === rodCols[1]){
-    nc = r.col; // ノード列を左に合わせる
+    frontNode = getNode(r.row, r.col-1); // 左通路
   } else if(r.col === rodCols[2] || r.col === rodCols[3]){
-    nc = r.col; // ノード列を右に合わせる
+    frontNode = getNode(r.row, r.col+1); // 右通路
   }
-  const n = getNode(nr+1,nc); // ノード行番号を+1してロッド前
-  n.rod = r;
-  r.front = n;
+  r.front = frontNode;
+  frontNode.rod = r;
 });
 
 // ===== 隣接ノード設定 =====
@@ -128,13 +124,13 @@ function resize(){
   const offY = (canvas.height - totalRows*rowH)/2;
 
   nodes.forEach(n=>{
-    n.x = offX + n.col*colW + colW/2;
-    n.y = offY + n.row*rowH + rowH/2;
+    n.x = offX + (n.col+padRows)*colW + colW/2;
+    n.y = offY + (n.row+padRows)*rowH + rowH/2;
   });
 
   rods.forEach(r=>{
-    r.cx = offX + r.col*colW + colW/2;
-    r.cy = offY + r.row*rowH + rowH/2;
+    r.cx = offX + (r.col+padRows)*colW + colW/2;
+    r.cy = offY + (r.row+padRows)*rowH + rowH/2;
     r.el.style.left = (r.cx-colW/2) + "px";
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
