@@ -45,7 +45,7 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
-// 通路ノード
+// 通路ノード作成（ロッドを避ける）
 for(let r=0;r<rowCount+padRows*2;r++){
   for(let c=0;c<colCount;c++){
     if(![0,2,3,5].includes(c)) getNode(r,c);
@@ -55,7 +55,7 @@ for(let r=0;r<rowCount+padRows*2;r++){
 // ロッド前ノード
 rods.forEach(r=>{
   const nr = r.row+padRows;
-  const nc = (r.col<=2)?1:4;
+  const nc = (r.col<=2)?1:4; // ロッド左 or 右の通路に接続
   const n = getNode(nr,nc);
   n.rod = r;
   r.front = n;
@@ -70,7 +70,7 @@ nodeMap.forEach(n=>{
 });
 const nodes=[...nodeMap.values()];
 
-// ===== 座標 =====
+// ===== 座標設定 =====
 function resize(){
   canvas.width=container.clientWidth;
   canvas.height=container.clientHeight;
@@ -121,10 +121,11 @@ function calcPathBFS(start,goal){
   return path;
 }
 
-// ===== 近接ノード取得 =====
+// ===== 近接ノード取得（通路ノードのみ） =====
 function nearestNode(){
   return nodes.reduce((a,b)=>
-    Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a);
+    Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
+  );
 }
 
 // ===== 最寄り空きロッド =====
@@ -132,9 +133,9 @@ function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
   if(emptyRods.length===0) return null;
   let nearestRod = emptyRods.reduce((a,b)=>
-    Math.hypot(b.cx-user.x,b.cy-user.y) < Math.hypot(a.cx-user.x,a.cy-user.y) ? b : a
+    Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
   );
-  return nearestRod.front || { x: nearestRod.cx, y: nearestRod.cy, neighbors: [] };
+  return nearestRod.front;
 }
 
 // ===== 描画 =====
@@ -154,7 +155,7 @@ function draw(p){
     ctx.fillText(r.id,r.cx,r.cy);
   });
 
-  // 経路線描画
+  // 経路描画
   if(p && p.length){
     ctx.strokeStyle="blue";
     ctx.lineWidth=4;
