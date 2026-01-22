@@ -7,9 +7,10 @@ const userMarker = document.getElementById("user-marker");
 // ===== 駐車場設定 =====
 const rowCount = 5;   // 駐車スペース行数
 const colCount = 6;   // 駐車スペース列数
-const padRows = 1;    // 外周通路分
+const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
+
 let user = { x:0, y:0 };
 
 // ===== ロッド作成 =====
@@ -52,7 +53,6 @@ for(let r=0;r<rowCount + padRows*2; r++){
     const innerCol = c - padRows;
     if(![0,2,3,5].includes(innerCol)){
       const n = getNode(r,c);
-      // 外周ノードは優先ノード
       if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
         n.priority = true;
       }
@@ -78,10 +78,38 @@ nodeMap.forEach(n=>{
 });
 const nodes = [...nodeMap.values()];
 
+// ===== ノード可視化キャンバス =====
+const nodeCanvas = document.createElement("canvas");
+nodeCanvas.style.position = "absolute";
+nodeCanvas.style.inset = "0";
+nodeCanvas.style.pointerEvents = "none";
+nodeCanvas.style.zIndex = "20";
+container.appendChild(nodeCanvas);
+const nodeCtx = nodeCanvas.getContext("2d");
+
+function drawNodes(){
+  nodeCanvas.width = container.clientWidth;
+  nodeCanvas.height = container.clientHeight;
+  nodeCtx.clearRect(0,0,nodeCanvas.width,nodeCanvas.height);
+  nodes.forEach(n=>{
+    nodeCtx.beginPath();
+    nodeCtx.arc(n.x,n.y,5,0,Math.PI*2);
+    nodeCtx.fillStyle = n.priority ? "yellow" : "cyan";
+    nodeCtx.fill();
+    nodeCtx.fillStyle = "black";
+    nodeCtx.font = "10px sans-serif";
+    nodeCtx.textAlign = "center";
+    nodeCtx.textBaseline = "middle";
+    nodeCtx.fillText(`${n.row},${n.col}`, n.x, n.y - 10);
+  });
+}
+
 // ===== 座標設定 =====
 function resize(){
   canvas.width = container.clientWidth;
   canvas.height = container.clientHeight;
+  nodeCanvas.width = canvas.width;
+  nodeCanvas.height = canvas.height;
 
   const totalCols = colCount + padRows*2;
   const totalRows = rowCount + padRows*2;
@@ -104,11 +132,13 @@ function resize(){
     user.x = canvas.width/2;
     user.y = canvas.height - rowH;
   }
+
+  drawNodes();
 }
 resize();
 window.addEventListener("resize",resize);
 
-// ===== BFS経路計算 =====
+// ===== BFS 経路計算 =====
 function calcPathBFS(start,goal){
   if(!start || !goal) return [];
   const queue = [start];
@@ -150,29 +180,22 @@ function nearestGoalNode(){
 }
 
 // ===== 外周優先経路 =====
-function calcPathViaPriority(start, goal){
+function calcPathViaPriority(start,goal){
   if(!start || !goal) return [];
-
-  const priorityNodes = nodes.filter(n => n.priority);
-  if(priorityNodes.length === 0) return calcPathBFS(start, goal) || [];
-
+  const priorityNodes = nodes.filter(n=>n.priority);
+  if(priorityNodes.length===0) return calcPathBFS(start,goal);
   let nearestPriority = priorityNodes.reduce((a,b)=>
     Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
   );
-
-  const path1 = calcPathBFS(start, nearestPriority) || [];
-  const path2 = calcPathBFS(nearestPriority, goal) || [];
-
-  if(path1.length && path2.length){
-    return [...path1, ...path2.slice(1)];
-  }
-  return [...path1, ...path2];
+  const path1 = calcPathBFS(start,nearestPriority);
+  const path2 = calcPathBFS(nearestPriority,goal);
+  return [...path1,...path2.slice(1)];
 }
 
 // ===== 描画 =====
 function draw(p){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
+  // ロッド描画
   rods.forEach(r=>{
     ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
     ctx.fillRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
@@ -185,6 +208,7 @@ function draw(p){
     ctx.fillText(r.id,r.cx,r.cy);
   });
 
+  // 経路描画
   if(p && p.length){
     ctx.strokeStyle="blue";
     ctx.lineWidth=4;
@@ -220,6 +244,7 @@ setInterval(recalcPath,300);
 // ===== メインループ =====
 (function loop(){
   draw(path);
+  drawNodes();
   userMarker.style.left = (user.x-6) + "px";
   userMarker.style.top = (user.y-6) + "px";
   requestAnimationFrame(loop);
