@@ -188,27 +188,44 @@ function nearestNode(){
   );
 }
 
-// ===== 最寄り空きロッド前ノード =====
+// ===== 最寄り空きロッド前ノードまたは優先ノード =====
 function nearestGoalNode(){
   const emptyRods = rods.filter(r=>!r.status);
-  if(emptyRods.length===0) return null;
+  const priorityNodes = nodes.filter(n=>n.priority);
+
+  if(emptyRods.length === 0){
+    // 空きロッドがない場合は優先ノードに向かう
+    return priorityNodes.reduce((a,b)=>
+      Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
+    );
+  }
+
+  // 空きロッドがある場合は最寄り空きロッド前ノードを返す
   let nearestRod = emptyRods.reduce((a,b)=>
     Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
   );
   return nearestRod.front;
 }
 
-// ===== 外周優先経路 =====
+// ===== 外周優先経路（優先ノード経由） =====
 function calcPathViaPriority(start,goal){
   if(!start || !goal) return [];
+
+  // 優先ノード（黄色）を通すかどうか
   const priorityNodes = nodes.filter(n=>n.priority);
-  if(priorityNodes.length===0) return calcPathBFS(start,goal);
-  let nearestPriority = priorityNodes.reduce((a,b)=>
+  if(priorityNodes.length === 0) return calcPathBFS(start,goal);
+
+  // 現在位置に最も近い優先ノードを取得
+  const nearestPriority = priorityNodes.reduce((a,b)=>
     Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
   );
-  const path1 = calcPathBFS(start,nearestPriority);
-  const path2 = calcPathBFS(nearestPriority,goal);
-  return [...path1,...path2.slice(1)];
+
+  // 経路計算
+  let pathToPriority = calcPathBFS(start, nearestPriority);
+  let pathToGoal = calcPathBFS(nearestPriority, goal);
+
+  // 優先ノードが経路にすでに含まれている場合は重複を避ける
+  return [...pathToPriority, ...pathToGoal.slice(1)];
 }
 
 // ===== 描画 =====
