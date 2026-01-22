@@ -5,8 +5,8 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 7;   // 駐車スペース行数
-const colCount = 8;   // 列数（通路とロッド込み）
+const rowCount = 7;   // 行数
+const colCount = 8;   // 列数（通路+ロッド込み）
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
@@ -15,7 +15,6 @@ let user = { x:0, y:0 };
 
 // ===== ロッド列パターン =====
 // 左から: 通路-ロッド-通路-ロッド-ロッド-通路-ロッド-通路
-// つまりロッドは列 1,3,4,6 に配置
 const rodCols = [1,3,4,6];
 
 // ===== ロッド作成 =====
@@ -56,8 +55,9 @@ function getNode(r,c){
 for(let r=0;r<rowCount + padRows*2; r++){
   for(let c=0;c<colCount + padRows*2; c++){
     const innerCol = c - padRows;
-    if(!rodCols.includes(innerCol)){
+    if(!rodCols.includes(innerCol)){  // ロッド列を避ける
       const n = getNode(r,c);
+      // 外周優先ノード
       if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
         n.priority = true;
       }
@@ -65,21 +65,21 @@ for(let r=0;r<rowCount + padRows*2; r++){
   }
 }
 
-// ロッド前ノード
+// ===== ロッド前ノードを通路に割り当て =====
 rods.forEach(r=>{
   const nr = r.row + padRows;
   let nc;
   if(r.col === rodCols[0] || r.col === rodCols[1]){
-    nc = r.col - 1; // 左通路
-  } else {
-    nc = r.col + 1; // 右通路
+    nc = r.col - 1; // 左の通路
+  } else if(r.col === rodCols[2] || r.col === rodCols[3]){
+    nc = r.col + 1; // 右の通路
   }
   const n = getNode(nr,nc);
   n.rod = r;
   r.front = n;
 });
 
-// 隣接設定
+// ===== 隣接ノード設定 =====
 nodeMap.forEach(n=>{
   [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
     const nb = nodeMap.get(key(n.row+dr,n.col+dc));
