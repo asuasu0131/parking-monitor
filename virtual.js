@@ -5,8 +5,8 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 7;   // 行数
-const colCount = 6;   // 列数（通路+ロッド込み）
+const rowCount = 8;   // 行数
+const colCount = 8;   // 列数（通路+ロッド込み）
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
@@ -41,7 +41,7 @@ rods.forEach(r=>{
   r.el=d;
 });
 
-// ===== ノード作成 =====
+// ===== ノード作成（特定位置のみ） =====
 const nodeMap = new Map();
 function key(r,c){ return `${r},${c}`; }
 function getNode(r,c){
@@ -51,33 +51,33 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
-// ===== ノード作成（特定位置のみ） =====
 const nodePositions = [
-  [8,2],[8,5]// 優先ノード
-  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],  // 左ロッド前ノード
-  [1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],  // 右ロッド前ノード
+  [8,2],[8,5],                       // 優先ノード（黄色）
+  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],  // 左ロッド前ノード（水色）
+  [1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],  // 右ロッド前ノード（水色）
 ];
 
 nodePositions.forEach(([r,c])=>{
   const n = getNode(r,c);
   // 外周の場合は優先ノードにする
   if(r===8){
-    n.priority = true;  // 黄色ノード
+    n.priority = true;  // 黄色
   } else {
-    n.priority = false; // 水色ノード
+    n.priority = false; // 水色
   }
 });
 
-// ===== ロッド前ノードを通路に割り当て =====
+// ===== ロッド前ノードを割り当て =====
 rods.forEach(r=>{
-  const nr = r.row + padRows;
+  // 左ロッドは左通路のノード、右ロッドは右通路のノード
+  const nr = r.row;
   let nc;
   if(r.col === rodCols[0] || r.col === rodCols[1]){
-    nc = r.col - 1; // 左の通路
+    nc = r.col; // ノード列を左に合わせる
   } else if(r.col === rodCols[2] || r.col === rodCols[3]){
-    nc = r.col + 1; // 右の通路
+    nc = r.col; // ノード列を右に合わせる
   }
-  const n = getNode(nr,nc);
+  const n = getNode(nr+1,nc); // ノード行番号を+1してロッド前
   n.rod = r;
   r.front = n;
 });
@@ -134,7 +134,7 @@ function resize(){
 
   rods.forEach(r=>{
     r.cx = offX + r.col*colW + colW/2;
-    r.cy = offY + (r.row+padRows)*rowH + rowH/2;
+    r.cy = offY + r.row*rowH + rowH/2;
     r.el.style.left = (r.cx-colW/2) + "px";
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
