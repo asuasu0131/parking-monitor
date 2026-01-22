@@ -140,9 +140,16 @@ function resize(){
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
 
-  if(!user.x){
-    user.x = canvas.width/2;
-    user.y = canvas.height - rowH;
+  // ===== ユーザー初期位置（D7の下あたり） =====
+  if(!user.x && !user.y){
+    const d7 = rods.find(r=>r.id==="D7");
+    if(d7){
+      user.x = d7.cx;
+      user.y = d7.cy + rowH; // 下に少しずらす
+    } else {
+      user.x = canvas.width/2;
+      user.y = canvas.height - rowH;
+    }
   }
 
   drawNodes();
