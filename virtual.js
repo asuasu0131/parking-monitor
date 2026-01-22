@@ -6,7 +6,7 @@ const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
 const rowCount = 7;   // 行数
-const colCount = 8;   // 列数（通路+ロッド込み）
+const colCount = 6;   // 列数（通路+ロッド込み）
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
