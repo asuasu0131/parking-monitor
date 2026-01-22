@@ -255,8 +255,11 @@ let lastGoal = null;
 function recalcPath(){
   const s = nearestNode();
   const g = nearestGoalNode();
-  if(!g || g===lastGoal) return;
-  lastGoal = g;
+  if(!g) {
+    path = [];
+    return;
+  }
+  // lastGoalによる早期リターンは削除
   path = calcPathViaPriority(s,g);
 }
 setInterval(recalcPath,300);
