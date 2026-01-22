@@ -18,7 +18,7 @@ for(let r=0;r<rowCount;r++){
   [["A",0],["B",2],["C",3],["D",5]].forEach(([k,c])=>{
     rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
-});
+};
 
 // ロッドDOM作成
 rods.forEach(r=>{
