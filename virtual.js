@@ -61,7 +61,7 @@ for(let r=0;r<rowCount+padRows*2;r++){
 // ロッド前ノード
 rods.forEach(r=>{
   const nr = r.row+padRows;
-  const nc = (r.col<=2)?1:4; // ロッド左 or 右の通路に接続
+  const nc = (r.col<=2)?1+padRows : 4+padRows; // ロッド左 or 右の通路に接続
   const n = getNode(nr,nc);
   n.rod = r;
   r.front = n;
@@ -80,8 +80,11 @@ const nodes=[...nodeMap.values()];
 function resize(){
   canvas.width=container.clientWidth;
   canvas.height=container.clientHeight;
-  const offX = (canvas.width - colCount*colW)/2;
-  const offY = (canvas.height - (rowCount+padRows*2)*rowH)/2;
+
+  const totalCols = colCount + padRows*2;
+  const totalRows = rowCount + padRows*2;
+  const offX = (canvas.width - totalCols*colW)/2;
+  const offY = (canvas.height - totalRows*rowH)/2;
 
   nodes.forEach(n=>{
     n.x = offX + n.col*colW + colW/2;
