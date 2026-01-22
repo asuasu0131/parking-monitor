@@ -5,8 +5,8 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 8;   // 行数（1始まり）
-const colCount = 8;   // 列数（通路+ロッド込み）
+const rowCount = 7;   // ロッドの行数
+const colCount = 8;   // 列数（通路＋ロッド）
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
@@ -14,7 +14,7 @@ const rowH = 50;
 let user = { x:0, y:0 };
 
 // ===== ロッド列パターン =====
-// 左から: 通路-ロッド-通路-ロッド-ロッド-通路-ロッド-通路
+// 0:通路,1:ロッドA,2:通路,3:ロッドB,4:ロッドC,5:通路,6:ロッドD,7:通路
 const rodCols = [1,3,4,6];
 
 // ===== ロッド作成 =====
@@ -51,26 +51,33 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
-// ノードの座標指定（優先ノードやロッド前ノード）
-const nodePositions = [
-  [9,2],[9,5]// 優先ノード
-  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],  // 左ロッド前ノード
-  [1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],  // 右ロッド前ノード
-];
+// ノードの座標指定（ロッド前と優先ノード）
+const nodePositions = [];
 
+// 左ロッド前ノード（列2）
+for(let r=1; r<=rowCount; r++) nodePositions.push([r,2]);
+
+// 右ロッド前ノード（列5）
+for(let r=1; r<=rowCount; r++) nodePositions.push([r,5]);
+
+// 優先ノード（黄色、8行目）
+nodePositions.push([8,2]);
+nodePositions.push([8,5]);
+
+// ノード生成と優先設定
 nodePositions.forEach(([r,c])=>{
   const n = getNode(r,c);
-  // 0行目は優先ノード（黄色）
-  n.priority = r===9;
+  // 8行目は優先ノード（黄色）、それ以外は水色
+  n.priority = (r === 8);
 });
 
 // ===== ロッド前ノード割り当て =====
 rods.forEach(r=>{
   let frontNode;
   if(r.col === rodCols[0] || r.col === rodCols[1]){
-    frontNode = getNode(r.row, r.col-1); // 左通路
+    frontNode = getNode(r.row, 2); // 左通路
   } else if(r.col === rodCols[2] || r.col === rodCols[3]){
-    frontNode = getNode(r.row, r.col+1); // 右通路
+    frontNode = getNode(r.row, 5); // 右通路
   }
   r.front = frontNode;
   frontNode.rod = r;
@@ -117,7 +124,7 @@ function resize(){
   nodeCanvas.height = canvas.height;
 
   const totalCols = colCount + padRows*2;
-  const totalRows = rowCount + padRows*2;
+  const totalRows = rowCount + padRows*2 + 1; // 優先ノード行含む
   const offX = (canvas.width - totalCols*colW)/2;
   const offY = (canvas.height - totalRows*rowH)/2;
 
