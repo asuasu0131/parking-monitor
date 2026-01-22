@@ -6,17 +6,22 @@ const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
 const rowCount = 7;   // 駐車スペース行数
-const colCount = 8;   // 駐車スペース列数
+const colCount = 8;   // 列数（通路とロッド込み）
 const padRows = 1;    // 外周通路
 const colW = 70;
 const rowH = 50;
 
 let user = { x:0, y:0 };
 
+// ===== ロッド列パターン =====
+// 左から: 通路-ロッド-通路-ロッド-ロッド-通路-ロッド-通路
+// つまりロッドは列 1,3,4,6 に配置
+const rodCols = [1,3,4,6];
+
 // ===== ロッド作成 =====
 const rods=[];
 for(let r=0;r<rowCount;r++){
-  [["A",0],["B",2],["C",5],["D",7]].forEach(([k,c])=>{
+  [["A",rodCols[0]],["B",rodCols[1]],["C",rodCols[2]],["D",rodCols[3]]].forEach(([k,c])=>{
     rods.push({id:`${k}${r+1}`,row:r,col:c,status:0});
   });
 }
@@ -51,7 +56,7 @@ function getNode(r,c){
 for(let r=0;r<rowCount + padRows*2; r++){
   for(let c=0;c<colCount + padRows*2; c++){
     const innerCol = c - padRows;
-    if(![0,2,5,7].includes(innerCol)){
+    if(!rodCols.includes(innerCol)){
       const n = getNode(r,c);
       if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
         n.priority = true;
@@ -63,7 +68,12 @@ for(let r=0;r<rowCount + padRows*2; r++){
 // ロッド前ノード
 rods.forEach(r=>{
   const nr = r.row + padRows;
-  const nc = (r.col <= 2) ? 1+padRows : 4+padRows;
+  let nc;
+  if(r.col === rodCols[0] || r.col === rodCols[1]){
+    nc = r.col - 1; // 左通路
+  } else {
+    nc = r.col + 1; // 右通路
+  }
   const n = getNode(nr,nc);
   n.rod = r;
   r.front = n;
@@ -119,11 +129,9 @@ function resize(){
     n.y = offY + n.row*rowH + rowH/2;
   });
 
-  // ロッドのUIを左に1列ずらしてノードの通路に揃える
   rods.forEach(r=>{
-    const rodColOffset = 1;
-    r.cx = offX + (r.col + rodColOffset)*colW + colW/2;
-    r.cy = offY + (r.row + padRows)*rowH + rowH/2;
+    r.cx = offX + r.col*colW + colW/2;
+    r.cy = offY + (r.row+padRows)*rowH + rowH/2;
     r.el.style.left = (r.cx-colW/2) + "px";
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
