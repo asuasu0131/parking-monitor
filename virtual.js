@@ -51,19 +51,22 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
-// 通路ノード作成（ロッドを避ける）
-for(let r=0;r<rowCount + padRows*2; r++){
-  for(let c=0;c<colCount + padRows*2; c++){
-    const innerCol = c - padRows;
-    if(!rodCols.includes(innerCol)){  // ロッド列を避ける
-      const n = getNode(r,c);
-      // 外周優先ノード
-      if(r===0 || r===rowCount+padRows*2-1 || c===0 || c===colCount+padRows*2-1){
-        n.priority = true;
-      }
-    }
+// ===== ノード作成（特定位置のみ） =====
+const nodePositions = [
+  [8,2],[8,5]// 優先ノード
+  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],  // 左ロッド前ノード
+  [1,5],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5],  // 右ロッド前ノード
+];
+
+nodePositions.forEach(([r,c])=>{
+  const n = getNode(r,c);
+  // 外周の場合は優先ノードにする
+  if(r===8){
+    n.priority = true;  // 黄色ノード
+  } else {
+    n.priority = false; // 水色ノード
   }
-}
+});
 
 // ===== ロッド前ノードを通路に割り当て =====
 rods.forEach(r=>{
