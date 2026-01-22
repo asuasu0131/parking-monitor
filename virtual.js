@@ -5,16 +5,15 @@ const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
 // ===== 駐車場設定 =====
-const rowCount = 7;   // ロッドの行数
-const colCount = 8;   // 列数（通路＋ロッド）
-const padRows = 1;    // 外周通路
+const rowCount = 7;
+const colCount = 8;
+const padRows = 1;
 const colW = 70;
 const rowH = 50;
 
 let user = { x:0, y:0 };
 
 // ===== ロッド列パターン =====
-// 0:通路,1:ロッドA,2:通路,3:ロッドB,4:ロッドC,5:通路,6:ロッドD,7:通路
 const rodCols = [1,3,4,6];
 
 // ===== ロッド作成 =====
@@ -41,7 +40,7 @@ rods.forEach(r=>{
   r.el=d;
 });
 
-// ===== ノード作成（特定位置のみ） =====
+// ===== ノード作成 =====
 const nodeMap = new Map();
 function key(r,c){ return `${r},${c}`; }
 function getNode(r,c){
@@ -51,39 +50,27 @@ function getNode(r,c){
   return nodeMap.get(key(r,c));
 }
 
-// ノードの座標指定（ロッド前と優先ノード）
+// ノード座標指定
 const nodePositions = [];
+for(let r=1; r<=rowCount; r++) nodePositions.push([r,2]); // 左通路
+for(let r=1; r<=rowCount; r++) nodePositions.push([r,5]); // 右通路
+nodePositions.push([8,2],[8,5]); // 優先ノード
 
-// 左ロッド前ノード（列2）
-for(let r=1; r<=rowCount; r++) nodePositions.push([r,2]);
-
-// 右ロッド前ノード（列5）
-for(let r=1; r<=rowCount; r++) nodePositions.push([r,5]);
-
-// 優先ノード（黄色、8行目）
-nodePositions.push([8,2]);
-nodePositions.push([8,5]);
-
-// ノード生成と優先設定
 nodePositions.forEach(([r,c])=>{
   const n = getNode(r,c);
-  // 8行目は優先ノード（黄色）、それ以外は水色
-  n.priority = (r === 8);
+  n.priority = (r===8);
 });
 
-// ===== ロッド前ノード割り当て =====
+// ロッド前ノード割り当て
 rods.forEach(r=>{
-  let frontNode;
-  if(r.col === rodCols[0] || r.col === rodCols[1]){
-    frontNode = getNode(r.row, 2); // 左通路
-  } else if(r.col === rodCols[2] || r.col === rodCols[3]){
-    frontNode = getNode(r.row, 5); // 右通路
-  }
+  let frontNode = null;
+  if(r.col === rodCols[0] || r.col === rodCols[1]) frontNode = getNode(r.row,2);
+  else if(r.col === rodCols[2] || r.col === rodCols[3]) frontNode = getNode(r.row,5);
   r.front = frontNode;
   frontNode.rod = r;
 });
 
-// ===== 隣接ノード設定 =====
+// 隣接ノード
 nodeMap.forEach(n=>{
   [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
     const nb = nodeMap.get(key(n.row+dr,n.col+dc));
@@ -92,7 +79,7 @@ nodeMap.forEach(n=>{
 });
 const nodes = [...nodeMap.values()];
 
-// ===== ノード可視化キャンバス =====
+// ノード可視化
 const nodeCanvas = document.createElement("canvas");
 nodeCanvas.style.position = "absolute";
 nodeCanvas.style.inset = "0";
@@ -116,7 +103,7 @@ function drawNodes(){
   });
 }
 
-// ===== 座標設定 =====
+// 座標設定
 function resize(){
   canvas.width = container.clientWidth;
   canvas.height = container.clientHeight;
@@ -124,7 +111,7 @@ function resize(){
   nodeCanvas.height = canvas.height;
 
   const totalCols = colCount + padRows*2;
-  const totalRows = rowCount + padRows*2 + 1; // 優先ノード行含む
+  const totalRows = rowCount + padRows*2 + 1;
   const offX = (canvas.width - totalCols*colW)/2;
   const offY = (canvas.height - totalRows*rowH)/2;
 
@@ -140,16 +127,10 @@ function resize(){
     r.el.style.top = (r.cy-rowH/2) + "px";
   });
 
-  // ===== ユーザー初期位置（D7の下あたり） =====
   if(!user.x && !user.y){
     const d7 = rods.find(r=>r.id==="D7");
-    if(d7){
-      user.x = d7.cx;
-      user.y = d7.cy + rowH; // 下に少しずらす
-    } else {
-      user.x = canvas.width/2;
-      user.y = canvas.height - rowH;
-    }
+    if(d7){ user.x=d7.cx; user.y=d7.cy+rowH; }
+    else { user.x = canvas.width/2; user.y = canvas.height-rowH; }
   }
 
   drawNodes();
@@ -157,13 +138,13 @@ function resize(){
 resize();
 window.addEventListener("resize",resize);
 
-// ===== BFS 経路計算 =====
+// ===== BFS =====
 function calcPathBFS(start,goal){
-  if(!start || !goal) return [];
-  const queue = [start];
-  const came = new Map([[start,null]]);
+  if(!start||!goal) return [];
+  const queue=[start];
+  const came=new Map([[start,null]]);
   while(queue.length){
-    const cur = queue.shift();
+    const cur=queue.shift();
     if(cur===goal) break;
     for(const n of cur.neighbors){
       if(!came.has(n)){
@@ -173,71 +154,70 @@ function calcPathBFS(start,goal){
     }
   }
   const path=[];
-  let cur = goal;
-  while(cur){
-    path.unshift(cur);
-    cur = came.get(cur);
-  }
+  let cur=goal;
+  while(cur){ path.unshift(cur); cur=came.get(cur); }
   return path;
 }
 
-// ===== 近接ノード取得 =====
+// ===== 近接ノード =====
 function nearestNode(){
   return nodes.reduce((a,b)=>
     Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
   );
 }
 
-// ===== 最寄り空きロッド前ノードまたは優先ノード =====
+// ===== 最寄り空きロッド前ノード（左右通路別） =====
 function nearestGoalNode(){
-  const emptyRods = rods.filter(r=>!r.status);
-  const priorityNodes = nodes.filter(n=>n.priority);
+  const emptyLeft = rods.filter(r=>!r.status && (r.col===rodCols[0] || r.col===rodCols[1])).map(r=>r.front);
+  const emptyRight = rods.filter(r=>!r.status && (r.col===rodCols[2] || r.col===rodCols[3])).map(r=>r.front);
 
-  if(emptyRods.length === 0){
-    // 空きロッドがない場合は優先ノードに向かう
-    return priorityNodes.reduce((a,b)=>
-      Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
-    );
-  }
-
-  // 空きロッドがある場合は候補リストを返す
-  return emptyRods.map(r => r.front);
+  return {left: emptyLeft, right: emptyRight};
 }
 
-// ===== 外周優先経路（優先ノード経由、最短距離の空きロッドを選択） =====
-function calcPathViaPriority(start,goalNodes){
-  if(!start || !goalNodes || goalNodes.length === 0) return [];
-
+// ===== 優先ノード経由経路計算（左右分け） =====
+function calcPath(start){
+  const empty = nearestGoalNode();
   const priorityNodes = nodes.filter(n=>n.priority);
-  if(priorityNodes.length === 0){
-    // 優先ノードがない場合は、単純に最短距離の空きロッド前ノードへ
-    return calcPathBFS(start, goalNodes[0]);
+  let path=[];
+
+  // 右側空きがあれば右優先
+  if(empty.right.length>0){
+    // 右通路優先ノード（8,5）経由
+    const pri = priorityNodes.find(n=>n.col===5) || priorityNodes[0];
+    let bestGoal = null;
+    let minDist = Infinity;
+    empty.right.forEach(g=>{
+      const p1 = calcPathBFS(start, pri);
+      const p2 = calcPathBFS(pri, g);
+      const dist = p1.length+p2.length;
+      if(dist<minDist){ minDist=dist; bestGoal=g; }
+    });
+    const p1 = calcPathBFS(start, pri);
+    const p2 = calcPathBFS(pri, bestGoal);
+    path=[...p1, ...p2.slice(1)];
+  }
+  // 右側満車なら左側案内
+  else if(empty.left.length>0){
+    const pri = priorityNodes.find(n=>n.col===2) || priorityNodes[0];
+    let bestGoal = null;
+    let minDist = Infinity;
+    empty.left.forEach(g=>{
+      const p1 = calcPathBFS(start, pri);
+      const p2 = calcPathBFS(pri, g);
+      const dist = p1.length+p2.length;
+      if(dist<minDist){ minDist=dist; bestGoal=g; }
+    });
+    const p1 = calcPathBFS(start, pri);
+    const p2 = calcPathBFS(pri, bestGoal);
+    path=[...p1, ...p2.slice(1)];
+  }
+  // 空きなし → 両方優先ノードまで
+  else{
+    path = priorityNodes.map(n=>calcPathBFS(start,n)).reduce((a,b)=>b.length>a.length?b:a,[]);
   }
 
-  // 現在位置から最も近い優先ノード
-  const nearestPriority = priorityNodes.reduce((a,b)=>
-    Math.hypot(a.x-user.x,a.y-user.y) < Math.hypot(b.x-user.x,b.y-user.y) ? a : b
-  );
-
-  // 空きロッド前ノードの中から優先ノード経由で最短距離のノードを選ぶ
-  let bestGoal = null;
-  let minDist = Infinity;
-  goalNodes.forEach(g=>{
-    const pathToPriority = calcPathBFS(start, nearestPriority);
-    const pathToGoal = calcPathBFS(nearestPriority, g);
-    const totalDist = pathToPriority.length + pathToGoal.length;
-    if(totalDist < minDist){
-      minDist = totalDist;
-      bestGoal = g;
-    }
-  });
-
-  // 経路計算
-  const pathToPriority = calcPathBFS(start, nearestPriority);
-  const pathToGoal = calcPathBFS(nearestPriority, bestGoal);
-  return [...pathToPriority, ...pathToGoal.slice(1)];
+  return path;
 }
-
 
 // ===== 描画 =====
 function draw(p){
@@ -281,12 +261,7 @@ window.addEventListener("keydown",e=>{
 let path=[];
 function recalcPath(){
   const s = nearestNode();
-  const gNodes = nearestGoalNode(); // 配列として取得
-  if(!gNodes || gNodes.length===0){
-    path = [];
-    return;
-  }
-  path = calcPathViaPriority(s,gNodes);
+  path = calcPath(s);
 }
 setInterval(recalcPath,300);
 
