@@ -4,55 +4,64 @@ const zoomSlider = document.getElementById("zoom-slider");
 
 let zoomScale = 1;
 
-let rods = [
-  { id: "A1", xRatio: 0.15, yRatio: 0.15, status: 0 },
-  { id: "A2", xRatio: 0.15, yRatio: 0.45, status: 1 },
-  { id: "A3", xRatio: 0.15, yRatio: 0.75, status: 0 },
-  { id: "B1", xRatio: 0.55, yRatio: 0.15, status: 0 },
-  { id: "B2", xRatio: 0.55, yRatio: 0.45, status: 1 },
-  { id: "B3", xRatio: 0.55, yRatio: 0.75, status: 0 }
-];
+// 🔽 ロッド共通サイズ（比率）
+let rodWidthRatio  = 0.08;
+let rodHeightRatio = 0.12;
+
+let rods = [];
+
+async function loadLayout() {
+  try {
+    const res = await fetch("/parking_layout.json");
+    rods = await res.json();
+  } catch {
+    rods = [];
+  }
+  renderRods();
+}
 
 function renderRods() {
   document.querySelectorAll(".rod").forEach(e => e.remove());
 
   rods.forEach(r => {
+    r.wRatio ??= rodWidthRatio;
+    r.hRatio ??= rodHeightRatio;
+
     const d = document.createElement("div");
     d.className = "rod " + (r.status === 0 ? "empty" : "full");
     d.innerHTML = `${r.id}<br>${r.status === 0 ? "空き" : "使用中"}`;
+
     lot.appendChild(d);
 
-    function updatePosition() {
-      d.style.left = (r.xRatio * container.clientWidth) + "px";
-      d.style.top  = (r.yRatio * container.clientHeight) + "px";
+    function update() {
+      d.style.left   = (r.xRatio * container.clientWidth) + "px";
+      d.style.top    = (r.yRatio * container.clientHeight) + "px";
+      d.style.width  = (r.wRatio * container.clientWidth) + "px";
+      d.style.height = (r.hRatio * container.clientHeight) + "px";
     }
 
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
+    update();
+    window.addEventListener("resize", update);
 
-    d.onmousedown = (e) => {
+    // ===== ドラッグ移動 =====
+    d.onmousedown = e => {
       e.preventDefault();
       const rect = container.getBoundingClientRect();
 
       function move(ev) {
         r.xRatio = (ev.clientX - rect.left) / rect.width;
         r.yRatio = (ev.clientY - rect.top) / rect.height;
-
         r.xRatio = Math.min(Math.max(r.xRatio, 0), 1);
         r.yRatio = Math.min(Math.max(r.yRatio, 0), 1);
-
-        updatePosition();
+        update();
       }
-
-      function up() {
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("mouseup", up);
-      }
-
       document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
+      document.addEventListener("mouseup", () => {
+        document.removeEventListener("mousemove", move);
+      }, { once:true });
     };
 
+    // ダブルクリックで状態切替
     d.ondblclick = () => {
       r.status = r.status === 0 ? 1 : 0;
       d.className = "rod " + (r.status === 0 ? "empty" : "full");
@@ -61,34 +70,30 @@ function renderRods() {
   });
 }
 
-renderRods();
-
-zoomSlider.addEventListener("input", () => {
-  zoomScale = parseFloat(zoomSlider.value);
-});
-
 document.getElementById("add-rod").onclick = () => {
   rods.push({
     id: "R" + (rods.length + 1),
     xRatio: 0.5,
     yRatio: 0.5,
+    wRatio: rodWidthRatio,
+    hRatio: rodHeightRatio,
     status: 0
   });
   renderRods();
 };
 
 document.getElementById("save-layout").onclick = async () => {
-  const res = await fetch("/save_layout", {
+  await fetch("/save_layout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(rods)
   });
-
-  if (res.ok) alert("parking_layout.json に保存しました");
-  else alert("保存失敗");
+  alert("保存しました");
 };
 
-(function loop() {
+zoomSlider.addEventListener("input", () => {
+  zoomScale = parseFloat(zoomSlider.value);
   lot.style.transform = `scale(${zoomScale})`;
-  requestAnimationFrame(loop);
-})();
+});
+
+loadLayout();
