@@ -12,8 +12,9 @@ let parking = {
 };
 
 let rods = [];
+const ROD_WIDTH = 2.5;  // 横 2.5m
+const ROD_HEIGHT = 5.0; // 縦 5m
 
-// 緯度経度から駐車場のメートル寸法を計算
 function calcParkingSize() {
   const latDist = (parking.lat1 - parking.lat2) * 111320;
   const lngDist = (parking.lng2 - parking.lng1) * 111320 * Math.cos((parking.lat1 + parking.lat2)/2*Math.PI/180);
@@ -21,7 +22,6 @@ function calcParkingSize() {
   parking.height = Math.abs(latDist);
 }
 
-// 駐車場設定ボタン
 document.getElementById("set-parking").onclick = () => {
   parking.lat1 = parseFloat(document.getElementById("lat1").value);
   parking.lng1 = parseFloat(document.getElementById("lng1").value);
@@ -32,19 +32,17 @@ document.getElementById("set-parking").onclick = () => {
   renderRods();
 };
 
-// ロッド描画
 function renderRods() {
   document.querySelectorAll(".rod").forEach(e => e.remove());
 
-  // 駐車場表示サイズ
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
   lot.style.width  = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
   rods.forEach(r => {
     const d = document.createElement("div");
-    d.className = "rod " + (r.status === 0 ? "empty" : "full");
-    d.innerHTML = `${r.id}<br>${r.status === 0 ? "空き" : "使用中"}`;
+    d.className = "rod " + (r.status===0?"empty":"full");
+    d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
     lot.appendChild(d);
 
     function updatePosition() {
@@ -60,17 +58,17 @@ function renderRods() {
 
     // ドラッグ
     d.onmousedown = (e) => {
-      if (e.button !== 0) return; // 左ボタンのみ
+      if(e.button!==0) return;
       e.preventDefault();
       const startX = e.clientX, startY = e.clientY;
       const startLeft = r.x, startTop = r.y;
 
-      function move(ev) {
+      function move(ev){
         r.x = startLeft + (ev.clientX - startX)/scale;
         r.y = startTop  + (ev.clientY - startY)/scale;
         updatePosition();
       }
-      function up() {
+      function up(){
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
       }
@@ -78,41 +76,38 @@ function renderRods() {
       document.addEventListener("mouseup", up);
     };
 
-    // 回転: 右クリックで45°回転
-    d.oncontextmenu = (e) => {
+    // 右クリック回転
+    d.oncontextmenu = (e)=>{
       e.preventDefault();
-      r.angle = (r.angle + 45) % 360;
+      r.angle = (r.angle + 45)%360;
       updatePosition();
     };
   });
 }
 
-// ロッド追加
 document.getElementById("add-rod").onclick = () => {
   rods.push({
-    id: "R" + (rods.length+1),
+    id: "R"+(rods.length+1),
     x: parking.width/4,
     y: parking.height/4,
-    width: parking.width/20,
-    height: parking.height/20,
+    width: ROD_WIDTH,
+    height: ROD_HEIGHT,
     status: 0,
     angle: 0
   });
   renderRods();
 };
 
-// 保存
 document.getElementById("save-layout").onclick = async () => {
   const res = await fetch("/save_layout", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(rods)
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(rods)
   });
   if(res.ok) alert("保存しました");
   else alert("保存失敗");
 };
 
-// ズーム
 zoomSlider.addEventListener("input", ()=>{ zoomScale = parseFloat(zoomSlider.value); });
 
 (function loop() {

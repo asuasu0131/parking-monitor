@@ -15,10 +15,9 @@ async function loadLayout() {
 function renderRods() {
   document.querySelectorAll(".rod").forEach(e=>e.remove());
 
-  // 駐車場表示サイズは管理者画面と同じスケーリング
   let maxX = Math.max(...rods.map(r=>r.x + r.width));
   let maxY = Math.max(...rods.map(r=>r.y + r.height));
-  let scale = Math.min(container.clientWidth / maxX, container.clientHeight / maxY);
+  let scale = Math.min(container.clientWidth/maxX, container.clientHeight/maxY);
   lot.style.width = maxX*scale + "px";
   lot.style.height = maxY*scale + "px";
 
@@ -35,9 +34,7 @@ function renderRods() {
 }
 
 socket.on("layout_updated", loadLayout);
-
 zoomSlider.addEventListener("input", ()=>{ zoomScale = parseFloat(zoomSlider.value); });
-
 loadLayout();
 
 (function loop(){
