@@ -2,30 +2,32 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>管理者用 駐車場編集画面（Canvas版）</title>
+<title>管理者用 超大型駐車場編集画面</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body { margin:0; font-family:sans-serif; text-align:center; background:#cfcfcf; }
-h1 { margin:8px 0; }
-#controls { margin:10px 0; }
-button { padding:6px 10px; margin:2px; }
-#zoom-slider { width:80%; margin:6px auto; }
-#canvas-container { position:relative; margin:auto; width:90%; max-width:1200px; aspect-ratio:16/9; background:#bfbfbf; border-radius:10px; cursor:crosshair; }
-canvas { width:100%; height:100%; display:block; }
+body { margin:0; font-family:sans-serif; }
+#controls { padding:8px; background:#eee; display:flex; gap:8px; align-items:center; }
+button { padding:6px 10px; font-size:14px; }
+#canvas-container { width:100%; height:80vh; background:#cfcfcf; overflow:hidden; position:relative; }
+canvas { background:#bfbfbf; display:block; margin:auto; cursor:grab; }
 </style>
 </head>
 <body>
-<h1>管理者用 駐車場編集画面（Canvas版）</h1>
+
+<h1>管理者用 超大型駐車場編集画面</h1>
+
 <div id="controls">
   <button id="add-rod">ロッド追加</button>
   <button id="save-layout">保存</button>
+  <span>スクロールでズーム、右ドラッグでパン</span>
 </div>
-<input type="range" id="zoom-slider" min="0.1" max="5" step="0.01" value="1">
+
 <div id="canvas-container">
-  <canvas id="parking-canvas"></canvas>
+  <canvas id="lotCanvas"></canvas>
 </div>
 
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script src="admin.js"></script>
+
 </body>
 </html>
