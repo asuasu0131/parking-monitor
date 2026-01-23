@@ -1,95 +1,108 @@
 const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
 const zoomSlider = document.getElementById("zoom-slider");
-const saveBtn = document.getElementById("save-layout");
-const addRodBtn = document.getElementById("add-rod");
+let zoomScale = parseFloat(zoomSlider.value);
 
-let rods = [];
-let rodCount = 0;
+let rods = [
+{id:"A1",x:null,y:null,status:0},
+{id:"A2",x:null,y:null,status:1},
+{id:"A3",x:null,y:null,status:0},
+{id:"B1",x:null,y:null,status:0},
+{id:"B2",x:null,y:null,status:1},
+{id:"B3",x:null,y:null,status:0}
+];
 
-// ===== JSONロード時の初期ロッド =====
-async function loadLayout() {
-    try {
-        const resp = await fetch("parking_layout.json");
-        const data = await resp.json();
-        data.forEach(r => addRod(r.id, r.x, r.y, r.status));
-    } catch (e) {
-        console.log("レイアウト読み込みエラー:", e);
-    }
+function renderRods(){
+document.querySelectorAll(".rod").forEach(e=>e.remove());
+rods.forEach((r)=>{
+const d = document.createElement("div");
+d.className = "rod "+(r.status===0?"empty":"full");
+d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
+lot.appendChild(d);
+r.element = d;
+
+if(r.x===null) r.x = container.clientWidth/2 - d.offsetWidth/2;
+if(r.y===null) r.y = container.clientHeight/2 - d.offsetHeight/2;
+d.style.left = r.x + "px";
+d.style.top  = r.y + "px";
+
+d.onmousedown = (e)=>{
+e.preventDefault();
+const startX = e.clientX, startY = e.clientY;
+const offsetX = startX - r.x, offsetY = startY - r.y;
+
+function move(e2){
+r.x = e2.clientX - offsetX;
+r.y = e2.clientY - offsetY;
+d.style.left = r.x + "px";
+d.style.top  = r.y + "px";
 }
+function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
+document.addEventListener("mousemove",move);
+document.addEventListener("mouseup",up);
+};
 
-// ===== ロッド追加 =====
-function addRod(id=null, x=50, y=50, status=0){
-    rodCount++;
-    const rodId = id || "R"+rodCount;
-    const d = document.createElement("div");
-    d.className = "rod " + (status?"full":"empty");
-    d.textContent = rodId;
-    lot.appendChild(d);
-
-    const rod = {id: rodId, x, y, status, el:d};
-    rods.push(rod);
-
-    // ドラッグ可能
-    let offsetX=0, offsetY=0, dragging=false;
-    d.addEventListener("mousedown", e=>{
-        dragging=true;
-        offsetX=e.offsetX;
-        offsetY=e.offsetY;
-        d.style.zIndex=1000;
-    });
-    window.addEventListener("mousemove", e=>{
-        if(dragging){
-            const rect = container.getBoundingClientRect();
-            rod.x = e.clientX - rect.left - offsetX;
-            rod.y = e.clientY - rect.top - offsetY;
-            d.style.left = rod.x + "px";
-            d.style.top  = rod.y + "px";
-        }
-    });
-    window.addEventListener("mouseup", ()=>{
-        dragging=false;
-        d.style.zIndex="";
-    });
-
-    // クリックで空き/満車切替
-    d.addEventListener("click", e=>{
-        if(dragging) return; // ドラッグ中は無効
-        rod.status ^=1;
-        d.className = "rod " + (rod.status?"full":"empty");
-    });
-
-    return rod;
-}
-
-// ===== UIリサイズ =====
-function resizeUI(){
-    const rect = container.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-
-    rods.forEach(r=>{
-        r.el.style.left = r.x + "px";
-        r.el.style.top  = r.y + "px";
-    });
-}
-window.addEventListener("resize", resizeUI);
-resizeUI();
-
-// ===== JSON保存 =====
-saveBtn.addEventListener("click", ()=>{
-    const json = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
-    const blob = new Blob([JSON.stringify(json, null, 2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "parking_layout.json";
-    a.click();
-    URL.revokeObjectURL(url);
+d.ondblclick = ()=>{
+r.status = r.status===0?1:0;
+d.className = "rod "+(r.status===0?"empty":"full");
+d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
+};
 });
+}
+renderRods();
 
-// ===== 新規ロッド追加 =====
-addRodBtn.addEventListener("click", ()=>addRod());
+zoomSlider.addEventListener("input", ()=>{ zoomScale = parseFloat(zoomSlider.value); });
 
-// ===== 初期ロード =====
-loadLayout();
+document.getElementById("add-rod").onclick = ()=>{
+const id = "R"+(rods.length+1);
+const newRod = {id:id,x:container.clientWidth/2-50,y:container.clientHeight/2-50,status:0};
+rods.push(newRod);
+renderRods();
+};
+
+document.getElementById("save-layout").onclick = async ()=>{
+const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
+try{
+const res = await fetch("/save_layout", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(saveData)
+});
+if(res.ok) alert("parking_layout.json に保存しました");
+else alert("保存に失敗しました");
+} catch(err){
+alert("通信エラー："+err);
+}
+};
+
+(function loop(){
+rods.forEach(r=>{
+if(r.element){
+r.element.style.left = r.x + "px";
+r.element.style.top  = r.y + "px";
+}
+});
+lot.style.transform = `scale(${zoomScale})`;
+requestAnimationFrame(loop);
+})();
+
+const socket = io();
+
+document.getElementById("save-layout").onclick = async ()=>{
+  const saveData = rods.map(r=>({
+    id:r.id, x:r.x, y:r.y, status:r.status
+  }));
+
+  const res = await fetch("/save_layout", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(saveData)
+  });
+
+  if(res.ok){
+    alert("parking_layout.json に保存しました");
+    socket.emit("layout_updated");
+  }else{
+    alert("保存失敗");
+  }
+};

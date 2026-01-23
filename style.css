@@ -1,67 +1,31 @@
-body {
-  font-family: sans-serif;
-  text-align: center;
-  padding: 10px;
-  margin: 0;
-  background: #f0f0f0;
-}
-
+body { font-family:sans-serif; background:#cfcfcf; padding:8px; margin:0; text-align:center; }
+h1 { font-size:clamp(18px,4vw,26px); margin:6px 0; }
+#location,#orientation { background:#fff; padding:6px 8px; margin-bottom:6px; border-radius:6px; font-size:13px; }
+button { padding:6px 10px; font-size:14px; margin:2px; }
+#controller { margin-bottom:8px; }
+#zoom-slider { width:80%; margin:6px auto; }
 #parking-lot-container {
-  position: relative;
-  width: 100%;
-  max-width: 600px;
-  aspect-ratio: 9/6.5;
-  margin: 20px auto;
-  background: #bfbfbf;
-  overflow: hidden;
-  border-radius: 8px;
-  border: 2px solid #888;
+  position:relative; width:100%; max-width:900px; aspect-ratio:9/6.5;
+  margin:auto; overflow:hidden; border-radius:10px; background:#bfbfbf; cursor:crosshair;
 }
-
-.rod {
-  position: absolute;
-  width: 70px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  color: white;
-  border: 1px solid #fff;
-  cursor: pointer;
+#parking-lot {
+  position:absolute; width:100%; height:100%;
+  top:0; left:0;
+  transform-origin: center center;
 }
-
-.empty { background: #4caf50; }
-.full  { background: #f44336; }
-
-#user-marker {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: #2196f3;
-  border-radius: 50%;
-  border: 2px solid white;
-  transform: translate(-50%, -50%);
-  z-index: 100;
+.rod { position:absolute; width:33.33%; height:22%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:white; font-weight:bold; font-size:clamp(14px,3.5vw,24px);
+  border-top:3px solid white; border-bottom:3px solid white;
 }
-
+.empty{background:#4caf50;} .full{background:#f44336;}
+#user-marker{position:absolute; width:14px; height:14px; background:#2196f3; border-radius:50%; border:2px solid white; z-index:1001; top:50%; left:50%; transform:translate(-50%,-50%);}
+.user-marker-other{position:absolute;width:12px;height:12px;background:#ff9800;border:2px solid white;border-radius:50%;z-index:1000;}
 #heading-arrow {
-  position: absolute;
-  width: 2px;
-  height: 30px;
-  background: red;
-  transform-origin: bottom center;
-  transform: translate(-50%, -100%) rotate(0deg);
-  z-index: 101;
+  position:absolute; width:2px; height:14px; background:red; z-index:1002;
+  top:50%; left:50%; transform-origin:bottom center; transform:translate(-50%,-100%) rotate(0deg);
 }
-
-#controller {
-  margin: 10px auto;
-}
-
-#controller button {
-  padding: 8px 12px;
-  font-size: 16px;
-  margin: 2px;
+#heading-arrow::after {
+  content:""; position:absolute; bottom:100%; left:-4px;
+  border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:10px solid red;
 }
