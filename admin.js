@@ -1,148 +1,129 @@
 const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
 const zoomSlider = document.getElementById("zoom-slider");
-const socket = io();
 
-let zoom = 1;
-let rods = [];
-let selectedRod = null;
+let zoomScale = 1;
 
-function createRod(id, x=100, y=100, w=80, h=50, angle=0, status=0){
-  const rod = {id,x,y,w,h,angle,status};
-  rods.push(rod);
+// 初期駐車場サイズ
+let lotWidth = parseInt(document.getElementById("lot-width").value);
+let lotHeight = parseInt(document.getElementById("lot-height").value);
+lot.style.width = lotWidth + "px";
+lot.style.height = lotHeight + "px";
 
-  const d = document.createElement("div");
-  d.className = "rod "+(status? "full":"empty");
-  d.innerHTML = id;
-  lot.appendChild(d);
-  rod.el = d;
+// ロッド配列（x,y,w,hはpx単位、rotationは角度）
+let rods = [
+  {id:"A1", x:300, y:150, w:60, h:120, rotation:0, status:0},
+  {id:"A2", x:300, y:350, w:60, h:120, rotation:0, status:1},
+  {id:"A3", x:300, y:550, w:60, h:120, rotation:0, status:0},
+  {id:"B1", x:900, y:150, w:60, h:120, rotation:0, status:0},
+  {id:"B2", x:900, y:350, w:60, h:120, rotation:0, status:1},
+  {id:"B3", x:900, y:550, w:60, h:120, rotation:0, status:0}
+];
 
-  const resize = document.createElement("div");
-  resize.className="resize-handle";
-  d.appendChild(resize);
+function renderRods(){
+  document.querySelectorAll(".rod").forEach(e=>e.remove());
 
-  const rotate = document.createElement("div");
-  rotate.className="rotate-handle";
-  d.appendChild(rotate);
+  rods.forEach(r=>{
+    const d = document.createElement("div");
+    d.className = "rod "+(r.status===0?"empty":"full");
+    d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
+    d.style.width = r.w + "px";
+    d.style.height = r.h + "px";
+    d.style.left = r.x + "px";
+    d.style.top  = r.y + "px";
+    d.style.transform = `rotate(${r.rotation}deg)`;
+    d.style.transformOrigin = "center center";
+    lot.appendChild(d);
+    r.el = d;
 
-  function update(){
-    d.style.width = rod.w+"px";
-    d.style.height = rod.h+"px";
-    d.style.left = rod.x+"px";
-    d.style.top = rod.y+"px";
-    d.style.transform = `rotate(${rod.angle}deg)`;
-  }
-  update();
+    // ドラッグ
+    d.onmousedown = (e)=>{
+      if(e.button!==0) return; // 左クリックのみ
+      e.preventDefault();
+      const startX = e.clientX, startY = e.clientY;
+      const offsetX = startX - r.x, offsetY = startY - r.y;
 
-  // 選択
-  d.onclick = (e)=>{
-    selectedRod = rod;
-    rods.forEach(r=>r.el.classList.remove("selected"));
-    d.classList.add("selected");
-    e.stopPropagation();
-  }
+      function move(ev){
+        r.x = ev.clientX - offsetX;
+        r.y = ev.clientY - offsetY;
+        r.el.style.left = r.x + "px";
+        r.el.style.top  = r.y + "px";
+      }
 
-  // 移動
-  d.onmousedown = (e)=>{
-    if(e.target===resize||e.target===rotate) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origX = rod.x;
-    const origY = rod.y;
-    function move(ev){
-      rod.x = origX + (ev.clientX-startX)/zoom;
-      rod.y = origY + (ev.clientY-startY)/zoom;
-      update();
-    }
-    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
-    document.addEventListener("mousemove",move);
-    document.addEventListener("mouseup",up);
-  };
+      function up(){
+        document.removeEventListener("mousemove",move);
+        document.removeEventListener("mouseup",up);
+      }
+      document.addEventListener("mousemove",move);
+      document.addEventListener("mouseup",up);
+    };
 
-  // サイズ変更
-  resize.onmousedown = (e)=>{
-    e.stopPropagation(); e.preventDefault();
-    const startX=e.clientX, startY=e.clientY;
-    const origW=rod.w, origH=rod.h;
-    function move(ev){
-      rod.w = Math.max(20, origW+(ev.clientX-startX)/zoom);
-      rod.h = Math.max(10, origH+(ev.clientY-startY)/zoom);
-      update();
-    }
-    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
-    document.addEventListener("mousemove",move);
-    document.addEventListener("mouseup",up);
-  };
+    // ダブルクリックで状態変更
+    d.ondblclick = ()=>{
+      r.status = r.status===0?1:0;
+      r.el.className = "rod "+(r.status===0?"empty":"full");
+      r.el.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
+    };
 
-  // 回転
-  rotate.onmousedown = (e)=>{
-    e.stopPropagation(); e.preventDefault();
-    const centerX = rod.x+rod.w/2;
-    const centerY = rod.y+rod.h/2;
-    function move(ev){
-      const dx = ev.clientX - centerX;
-      const dy = ev.clientY - centerY;
-      rod.angle = Math.atan2(dy,dx)*180/Math.PI;
-      update();
-    }
-    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
-    document.addEventListener("mousemove",move);
-    document.addEventListener("mouseup",up);
-  };
-
-  // ダブルクリックで状態変更
-  d.ondblclick = ()=>{
-    rod.status = rod.status?0:1;
-    d.className="rod "+(rod.status? "full":"empty");
-  }
-
-  return rod;
+    // 右クリックで回転
+    d.oncontextmenu = (e)=>{
+      e.preventDefault();
+      r.rotation = (r.rotation + 90)%360;
+      r.el.style.transform = `rotate(${r.rotation}deg)`;
+    };
+  });
 }
 
-// 初期ロッド
-createRod("A1",100,100);
-createRod("B1",300,100);
+renderRods();
 
-zoomSlider.addEventListener("input",()=>{
-  zoom = parseFloat(zoomSlider.value);
-  lot.style.transform = `scale(${zoom})`;
+// ズーム
+zoomSlider.addEventListener("input", ()=>{
+  zoomScale = parseFloat(zoomSlider.value);
 });
 
-// パン
-let isPanning=false, panStartX=0, panStartY=0, origScrollLeft=0, origScrollTop=0;
-container.addEventListener("mousedown",(e)=>{
-  if(!e.shiftKey) return;
-  isPanning=true; panStartX=e.clientX; panStartY=e.clientY;
-  origScrollLeft=container.scrollLeft; origScrollTop=container.scrollTop;
-});
-document.addEventListener("mousemove",(e)=>{
-  if(!isPanning) return;
-  container.scrollLeft = origScrollLeft-(e.clientX-panStartX);
-  container.scrollTop  = origScrollTop-(e.clientY-panStartY);
-});
-document.addEventListener("mouseup",(e)=>{ isPanning=false; });
+// ロッド追加
+document.getElementById("add-rod").onclick = ()=>{
+  rods.push({id:"R"+(rods.length+1), x:lotWidth/2-30, y:lotHeight/2-60, w:60, h:120, rotation:0, status:0});
+  renderRods();
+};
 
-// 背景クリックで選択解除
-lot.addEventListener("click",()=>{ selectedRod=null; rods.forEach(r=>r.el.classList.remove("selected")); });
-
-// Deleteキーで削除
-document.addEventListener("keydown",(e)=>{
-  if(e.key==="Delete" && selectedRod){
-    lot.removeChild(selectedRod.el);
-    rods = rods.filter(r=>r!==selectedRod);
-    selectedRod=null;
-  }
-});
-
-// 保存
+// JSON保存
 document.getElementById("save-layout").onclick = async ()=>{
-  const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,w:r.w,h:r.h,angle:r.angle,status:r.status}));
-  const res = await fetch("/save_layout",{
+  const res = await fetch("/save_layout", {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify(saveData)
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({lotWidth, lotHeight, rods})
   });
   if(res.ok) alert("保存しました");
   else alert("保存失敗");
 };
+
+// 敷地サイズ変更
+document.getElementById("apply-lot-size").onclick = ()=>{
+  const w = parseInt(document.getElementById("lot-width").value);
+  const h = parseInt(document.getElementById("lot-height").value);
+
+  const scaleX = w / lotWidth;
+  const scaleY = h / lotHeight;
+
+  // ロッドをスケーリング
+  rods.forEach(r=>{
+    r.x *= scaleX;
+    r.y *= scaleY;
+    r.w *= scaleX;
+    r.h *= scaleY;
+  });
+
+  lotWidth = w;
+  lotHeight = h;
+  lot.style.width = lotWidth + "px";
+  lot.style.height = lotHeight + "px";
+
+  renderRods();
+};
+
+// 描画ループ（ズーム反映）
+(function loop(){
+  lot.style.transform = `scale(${zoomScale})`;
+  requestAnimationFrame(loop);
+})();
