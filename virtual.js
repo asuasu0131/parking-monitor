@@ -4,295 +4,211 @@ const canvas = document.getElementById("path-canvas");
 const ctx = canvas.getContext("2d");
 const userMarker = document.getElementById("user-marker");
 
-// ===== 駐車場設定 =====
-const rowCount = 7;
-const colCount = 8;
-const padRows = 1;
-const colW = 70;
-const rowH = 50;
+let rods = [];
+let nodes = [];
+let path = [];
+let user = {x:0, y:0};
+const moveStep = 5;
 
-let user = { x:0, y:0 };
-
-// ===== ロッド列パターン =====
-const rodCols = [1,3,4,6];
-
-// ===== ロッド作成 =====
-const rods=[];
-for(let r=1;r<=rowCount;r++){
-  [["A",rodCols[0]],["B",rodCols[1]],["C",rodCols[2]],["D",rodCols[3]]].forEach(([k,c])=>{
-    rods.push({id:`${k}${r}`,row:r,col:c,status:0});
-  });
-}
-
-// ロッドDOM作成
-rods.forEach(r=>{
-  const d=document.createElement("div");
-  d.className="rod empty";
-  d.style.width=colW+"px";
-  d.style.height=rowH+"px";
-  d.textContent=r.id;
-  d.onclick=()=>{
-    r.status^=1;
-    d.className="rod "+(r.status?"full":"empty");
+// ================= JSONロード =================
+async function loadLayout(){
+  try{
+    const resp = await fetch("/parking_layout.json");
+    const data = await resp.json();
+    rods = data.map(r => ({...r, el:null, front:null}));
+    createRodDOMs();
+    generateNodes();
+    resize();
     recalcPath();
-  };
-  lot.appendChild(d);
-  r.el=d;
-});
-
-// ===== ノード作成 =====
-const nodeMap = new Map();
-function key(r,c){ return `${r},${c}`; }
-function getNode(r,c){
-  if(!nodeMap.has(key(r,c))){
-    nodeMap.set(key(r,c),{row:r,col:c,x:0,y:0,neighbors:[],rod:null,priority:false});
-  }
-  return nodeMap.get(key(r,c));
+  }catch(e){ console.error("JSONロード失敗", e); }
 }
 
-// ノード座標指定
-const nodePositions = [];
-for(let r=1; r<=rowCount; r++) nodePositions.push([r,2]); // 左通路
-for(let r=1; r<=rowCount; r++) nodePositions.push([r,5]); // 右通路
-nodePositions.push([8,2],[8,5]); // 優先ノード
-
-nodePositions.forEach(([r,c])=>{
-  const n = getNode(r,c);
-  n.priority = (r===8);
-});
-
-// ロッド前ノード割り当て
-rods.forEach(r=>{
-  let frontNode = null;
-  if(r.col === rodCols[0] || r.col === rodCols[1]) frontNode = getNode(r.row,2);
-  else if(r.col === rodCols[2] || r.col === rodCols[3]) frontNode = getNode(r.row,5);
-  r.front = frontNode;
-  frontNode.rod = r;
-});
-
-// 隣接ノード
-nodeMap.forEach(n=>{
-  [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
-    const nb = nodeMap.get(key(n.row+dr,n.col+dc));
-    if(nb) n.neighbors.push(nb);
-  });
-});
-const nodes = [...nodeMap.values()];
-
-// ノード可視化
-const nodeCanvas = document.createElement("canvas");
-nodeCanvas.style.position = "absolute";
-nodeCanvas.style.inset = "0";
-nodeCanvas.style.pointerEvents = "none";
-nodeCanvas.style.zIndex = "20";
-container.appendChild(nodeCanvas);
-const nodeCtx = nodeCanvas.getContext("2d");
-
-function drawNodes(){
-  nodeCtx.clearRect(0,0,nodeCanvas.width,nodeCanvas.height);
-  nodes.forEach(n=>{
-    nodeCtx.beginPath();
-    nodeCtx.arc(n.x,n.y,5,0,Math.PI*2);
-    nodeCtx.fillStyle = n.priority ? "yellow" : "cyan";
-    nodeCtx.fill();
-    nodeCtx.fillStyle = "black";
-    nodeCtx.font = "10px sans-serif";
-    nodeCtx.textAlign = "center";
-    nodeCtx.textBaseline = "middle";
-    nodeCtx.fillText(`${n.row},${n.col}`, n.x, n.y - 10);
-  });
-}
-
-// 座標設定
-function resize(){
-  canvas.width = container.clientWidth;
-  canvas.height = container.clientHeight;
-  nodeCanvas.width = canvas.width;
-  nodeCanvas.height = canvas.height;
-
-  const totalCols = colCount + padRows*2;
-  const totalRows = rowCount + padRows*2 + 1;
-  const offX = (canvas.width - totalCols*colW)/2;
-  const offY = (canvas.height - totalRows*rowH)/2;
-
-  nodes.forEach(n=>{
-    n.x = offX + (n.col+padRows)*colW + colW/2;
-    n.y = offY + (n.row+padRows)*rowH + rowH/2;
-  });
-
+// ================= ロッドDOM作成 =================
+function createRodDOMs(){
   rods.forEach(r=>{
-    r.cx = offX + (r.col+padRows)*colW + colW/2;
-    r.cy = offY + (r.row+padRows)*rowH + rowH/2;
-    r.el.style.left = (r.cx-colW/2) + "px";
-    r.el.style.top = (r.cy-rowH/2) + "px";
+    const d = document.createElement("div");
+    d.className = r.status ? "rod full" : "rod empty";
+    d.style.left = r.x + "px";
+    d.style.top = r.y + "px";
+    d.textContent = r.id;
+    lot.appendChild(d);
+    r.el = d;
+
+    d.onclick = ()=>{
+      r.status ^=1;
+      d.className = r.status ? "rod full":"rod empty";
+      recalcPath();
+    };
+  });
+}
+
+// ================= ノード生成 =================
+function generateNodes(){
+  nodes = [];
+  const step = 20;
+
+  // ロッド前ノード
+  rods.forEach(r=>{
+    const n = {x: r.x + 35, y: r.y - 20, neighbors: [], priority: false};
+    nodes.push(n);
+    r.front = n;
   });
 
-  if(!user.x && !user.y){
-    const d7 = rods.find(r=>r.id==="D7");
-    if(d7){ user.x=d7.cx; user.y=d7.cy+rowH; }
-    else { user.x = canvas.width/2; user.y = canvas.height-rowH; }
-  }
-
-  drawNodes();
-}
-resize();
-window.addEventListener("resize",resize);
-
-// ===== BFS =====
-function calcPathBFS(start,goal){
-  if(!start||!goal) return [];
-  const queue=[start];
-  const came=new Map([[start,null]]);
-  while(queue.length){
-    const cur=queue.shift();
-    if(cur===goal) break;
-    for(const n of cur.neighbors){
-      if(!came.has(n)){
-        came.set(n,cur);
-        queue.push(n);
+  // 通路ノード（簡易生成）
+  const cols = 20, rows = 15;
+  const cw = container.clientWidth/cols, ch = container.clientHeight/rows;
+  for(let i=0;i<=cols;i++){
+    for(let j=0;j<=rows;j++){
+      const x = i*cw, y = j*ch;
+      if(!nodes.some(n=>Math.hypot(n.x-x,n.y-y)<step/2)){
+        nodes.push({x,y,neighbors:[],priority:false});
       }
     }
   }
-  const path=[];
-  let cur=goal;
-  while(cur){ path.unshift(cur); cur=came.get(cur); }
-  return path;
+
+  // 隣接ノード設定
+  nodes.forEach(n=>{
+    nodes.forEach(m=>{
+      if(n===m) return;
+      const dx=Math.abs(n.x-m.x);
+      const dy=Math.abs(n.y-m.y);
+      if((dx===step && dy===0)||(dx===0 && dy===step)){
+        n.neighbors.push(m);
+      }
+    });
+  });
 }
 
-// ===== 近接ノード =====
+// ================= ユーザー操作 =================
+window.addEventListener("keydown",e=>{
+  switch(e.key){
+    case "ArrowUp": user.y-=moveStep; break;
+    case "ArrowDown": user.y+=moveStep; break;
+    case "ArrowLeft": user.x-=moveStep; break;
+    case "ArrowRight": user.x+=moveStep; break;
+  }
+  recalcPath();
+});
+
+// ================= 近接ノード検索 =================
 function nearestNode(){
-  return nodes.reduce((a,b)=>
-    Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y) ? b : a
-  );
+  return nodes.reduce((a,b)=>Math.hypot(b.x-user.x,b.y-user.y) < Math.hypot(a.x-user.x,a.y-user.y)?b:a);
 }
 
-// ===== 選択ポリシー切替 =====
-let selectionPolicy = "nearest"; // "nearest" or "entrance"
-const entranceNode = getNode(0,1); // A1ロッドの上側
+// ================= A* =================
+function astar(start, goals){
+  const openSet = [start];
+  const cameFrom = new Map();
+  const gScore = new Map();
+  gScore.set(start,0);
 
+  const h = (n)=>Math.min(...goals.map(g=>Math.hypot(n.x-g.x,n.y-g.y)));
+
+  while(openSet.length){
+    openSet.sort((a,b)=> (gScore.get(a)+h(a))-(gScore.get(b)+h(b)));
+    const current = openSet.shift();
+    if(goals.some(g=>g.x===current.x && g.y===current.y)){
+      const path=[current];
+      let c=current;
+      while(cameFrom.has(c)){
+        c=cameFrom.get(c);
+        path.push(c);
+      }
+      return path.reverse();
+    }
+    current.neighbors.forEach(n=>{
+      const tentative = gScore.get(current)+Math.hypot(n.x-current.x,n.y-current.y);
+      if(tentative < (gScore.get(n)||Infinity)){
+        cameFrom.set(n,current);
+        gScore.set(n,tentative);
+        if(!openSet.includes(n)) openSet.push(n);
+      }
+    });
+  }
+  return [];
+}
+
+// ================= 経路計算 =================
 function getBestRod(emptyRods){
-  if(emptyRods.length === 0) return null;
-  if(selectionPolicy==="nearest"){
-    return emptyRods.reduce((a,b)=>
-      Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y) ? b : a
-    );
+  if(emptyRods.length===0) return null;
+  return emptyRods.reduce((a,b)=> Math.hypot(b.front.x-user.x,b.front.y-user.y) < Math.hypot(a.front.x-user.x,a.front.y-user.y)?b:a);
+}
+
+function recalcPath(){
+  const start = nearestNode();
+  const emptyRods = rods.filter(r=>!r.status);
+  if(emptyRods.length>0){
+    const bestRod = getBestRod(emptyRods);
+    path = astar(start,[bestRod.front]);
   } else {
-    return emptyRods.reduce((a,b)=>
-      Math.hypot(b.front.x-entranceNode.x,b.front.y-entranceNode.y) < Math.hypot(a.front.x-entranceNode.x,a.front.y-entranceNode.y) ? b : a
-    );
+    path = [];
   }
 }
 
-// ===== 最寄り空きロッド前ノード（左右通路別） =====
-function nearestGoalNode(){
-  const emptyLeft = rods.filter(r=>!r.status && (r.col===rodCols[0] || r.col===rodCols[1]));
-  const emptyRight = rods.filter(r=>!r.status && (r.col===rodCols[2] || r.col===rodCols[3]));
-  return {left: emptyLeft, right: emptyRight};
-}
-
-// ===== 経路計算 =====
-function calcPath(start){
-  const empty = nearestGoalNode();
-  const priorityNodes = nodes.filter(n=>n.priority);
-  let path=[];
-
-  const centerX = (nodes.find(n=>n.col===2).x + nodes.find(n=>n.col===5).x)/2;
-  const preferSide = (user.x>centerX) ? "right" : "left";
-
-  let targetRods = (preferSide==="right") ? empty.right : empty.left;
-  if(targetRods.length===0){
-    targetRods = (preferSide==="right") ? empty.left : empty.right;
-  }
-
-  if(targetRods.length>0){
-    const bestRod = getBestRod(targetRods);
-    const priNode = priorityNodes.find(n=>n.col===bestRod.front.col) || priorityNodes[0];
-    const p1 = calcPathBFS(start, priNode);
-    const p2 = calcPathBFS(priNode, bestRod.front);
-    path=[...p1, ...p2.slice(1)];
-  } else {
-    path = priorityNodes.map(n=>calcPathBFS(start,n)).reduce((a,b)=>b.length>a.length?b:a,[]);
-  }
-
-  return path;
-}
-
-// ===== 描画 =====
-function draw(p){
+// ================= 描画 =================
+function draw(){
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // ロッド描画
   rods.forEach(r=>{
     ctx.fillStyle = r.status ? "#f44336" : "#4caf50";
-    ctx.fillRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
+    ctx.fillRect(r.x, r.y, r.el.offsetWidth, r.el.offsetHeight);
     ctx.strokeStyle="#000";
-    ctx.strokeRect(r.cx-colW/2, r.cy-rowH/2, colW, rowH);
+    ctx.strokeRect(r.x, r.y, r.el.offsetWidth, r.el.offsetHeight);
     ctx.fillStyle="#fff";
     ctx.font="bold 12px sans-serif";
     ctx.textAlign="center";
     ctx.textBaseline="middle";
-    ctx.fillText(r.id,r.cx,r.cy);
+    ctx.fillText(r.id,r.x + r.el.offsetWidth/2, r.y + r.el.offsetHeight/2);
   });
 
-  if(p && p.length){
+  // 経路描画
+  if(path.length>0){
     ctx.strokeStyle="blue";
-    ctx.lineWidth=4;
+    ctx.lineWidth=3;
     ctx.beginPath();
     ctx.moveTo(user.x,user.y);
-    p.forEach(n=>ctx.lineTo(n.x,n.y));
+    path.forEach(n=>ctx.lineTo(n.x,n.y));
     ctx.stroke();
   }
+
+  // ユーザーマーカー
+  userMarker.style.left = user.x + "px";
+  userMarker.style.top = user.y + "px";
+
+  requestAnimationFrame(draw);
 }
 
-// ===== ユーザー操作 =====
-const moveStep = 5;
-window.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp") user.y-=moveStep;
-  if(e.key==="ArrowDown") user.y+=moveStep;
-  if(e.key==="ArrowLeft") user.x-=moveStep;
-  if(e.key==="ArrowRight") user.x+=moveStep;
-  recalcPath();
-});
-
-// ===== 経路再計算 =====
-let path=[];
-function recalcPath(){
-  const s = nearestNode();
-  path = calcPath(s);
+// ================= サイズ調整 =================
+function resize(){
+  if(!user.x&&!user.y){
+    user.x=container.clientWidth/2;
+    user.y=container.clientHeight-30;
+  }
 }
-setInterval(recalcPath,300);
+window.addEventListener("resize",resize);
 
-// ===== ポリシー切替ボタン =====
-document.getElementById("policyBtn")?.addEventListener("click",()=>{
-  selectionPolicy = (selectionPolicy==="nearest") ? "entrance" : "nearest";
-  recalcPath();
-});
-
-// ===== センサ反映（CH0,CH1） =====
+// ================= センサ反映 =================
 const sensorRods = [
-    rods.find(r=>r.id==="A1"), // CH0
-    rods.find(r=>r.id==="B1")  // CH1
+  rods.find(r=>r.id==="A1"),
+  rods.find(r=>r.id==="B1")
 ];
-
 setInterval(async ()=>{
-    try{
-        const resp = await fetch("/get_sensor");
-        const data = await resp.json();
-        sensorRods[0].status = data.CH0;
-        sensorRods[1].status = data.CH1;
-        sensorRods.forEach(r=>{
-            r.el.className = "rod " + (r.status ? "full":"empty");
-        });
-        recalcPath();
-    } catch(e){
-        console.log("センサ取得エラー:", e);
-    }
-}, 500);
+  try{
+    const resp = await fetch("/get_sensor");
+    const data = await resp.json();
+    sensorRods.forEach((r,i)=>{
+      if(r){
+        r.status = data[`CH${i}`];
+        r.el.className = r.status ? "rod full":"rod empty";
+      }
+    });
+    recalcPath();
+  }catch(e){console.log("センサ取得エラー",e);}
+},500);
 
-// ===== メインループ =====
-(function loop(){
-  draw(path);
-  drawNodes();
-  userMarker.style.left = (user.x-6) + "px";
-  userMarker.style.top = (user.y-6) + "px";
-  requestAnimationFrame(loop);
-})();
+// ================= メイン =================
+loadLayout();
+draw();
