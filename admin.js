@@ -23,8 +23,9 @@ r.element = d;
 
 if(r.x===null) r.x = container.clientWidth/2 - d.offsetWidth/2;
 if(r.y===null) r.y = container.clientHeight/2 - d.offsetHeight/2;
-d.style.left = r.x + "px";
-d.style.top  = r.y + "px";
+// renderRods 内
+d.style.left = (r.xRatio ?? 0.5) * container.clientWidth + "px";
+d.style.top  = (r.yRatio ?? 0.5) * container.clientHeight + "px";
 
 d.onmousedown = (e)=>{
 e.preventDefault();
@@ -32,10 +33,10 @@ const startX = e.clientX, startY = e.clientY;
 const offsetX = startX - r.x, offsetY = startY - r.y;
 
 function move(e2){
-r.x = e2.clientX - offsetX;
-r.y = e2.clientY - offsetY;
-d.style.left = r.x + "px";
-d.style.top  = r.y + "px";
+    r.xRatio = (e2.clientX - offsetX) / container.clientWidth;
+    r.yRatio = (e2.clientY - offsetY) / container.clientHeight;
+    d.style.left = (r.xRatio * container.clientWidth) + "px";
+    d.style.top  = (r.yRatio * container.clientHeight) + "px";
 }
 function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
 document.addEventListener("mousemove",move);
@@ -61,7 +62,12 @@ renderRods();
 };
 
 document.getElementById("save-layout").onclick = async ()=>{
-const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
+const saveData = rods.map(r=>({
+    id: r.id,
+    xRatio: r.xRatio,
+    yRatio: r.yRatio,
+    status: r.status
+}));
 try{
 const res = await fetch("/save_layout", {
 method:"POST",
@@ -89,9 +95,12 @@ requestAnimationFrame(loop);
 const socket = io();
 
 document.getElementById("save-layout").onclick = async ()=>{
-  const saveData = rods.map(r=>({
-    id:r.id, x:r.x, y:r.y, status:r.status
-  }));
+const saveData = rods.map(r=>({
+    id: r.id,
+    xRatio: r.xRatio,
+    yRatio: r.yRatio,
+    status: r.status
+}));
 
   const res = await fetch("/save_layout", {
     method:"POST",

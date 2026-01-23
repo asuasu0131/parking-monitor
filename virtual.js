@@ -23,8 +23,9 @@ function renderRods(){
     d.className = "rod " + (r.status===0?"empty":"full");
     d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
 
-    d.style.left = r.x + "px";
-    d.style.top  = r.y + "px";
+    // renderRods 内
+    d.style.left = r.xRatio * container.clientWidth + "px";
+    d.style.top  = r.yRatio * container.clientHeight + "px";
 
     lot.appendChild(d);
   });
