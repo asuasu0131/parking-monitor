@@ -23,6 +23,34 @@ async function loadLayout(){
   }catch(e){ console.error("JSONロード失敗", e); }
 }
 
+function resizeUI() {
+    const containerRect = container.getBoundingClientRect();
+    const width = containerRect.width;
+    const height = containerRect.height;
+
+    // ロッド配置のスケーリング
+    rods.forEach(r => {
+        r.cx = r.x * (width / 900);  // 元の設計幅900pxを基準にスケーリング
+        r.cy = r.y * (height / 600); // 元の設計高さ600pxを基準にスケーリング
+        r.el.style.left = (r.cx - r.el.offsetWidth / 2) + "px";
+        r.el.style.top  = (r.cy - r.el.offsetHeight / 2) + "px";
+    });
+
+    // canvasやnodeCanvasのサイズ更新
+    canvas.width = width;
+    canvas.height = height;
+    if (typeof nodeCanvas !== 'undefined') {
+        nodeCanvas.width = width;
+        nodeCanvas.height = height;
+    }
+
+    // パスを再計算
+    if (typeof recalcPath === 'function') recalcPath();
+}
+window.addEventListener("resize", resizeUI);
+resizeUI(); // 初期読み込み時にも呼ぶ
+
+
 // ================= ロッドDOM作成 =================
 function createRodDOMs(){
   rods.forEach(r=>{
