@@ -57,6 +57,20 @@ function renderRods(){
       document.addEventListener("mousemove",move);
       document.addEventListener("mouseup",up);
     };
+  // サイズ変更
+    resize.onmousedown = (e)=>{
+    e.stopPropagation(); e.preventDefault();
+    const startX=e.clientX, startY=e.clientY;
+    const origW=rod.w, origH=rod.h;
+    function move(ev){
+        rod.w = Math.max(20, origW+(ev.clientX-startX)/zoom);
+        rod.h = Math.max(10, origH+(ev.clientY-startY)/zoom);
+        update();
+    }
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  };
 
     // ダブルクリックで状態変更
     d.ondblclick = ()=>{
@@ -65,12 +79,21 @@ function renderRods(){
       r.el.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
     };
 
-    // 右クリックで回転
-    d.oncontextmenu = (e)=>{
-      e.preventDefault();
-      r.rotation = (r.rotation + 90)%360;
-      r.el.style.transform = `rotate(${r.rotation}deg)`;
-    };
+  // 回転
+  rotate.onmousedown = (e)=>{
+    e.stopPropagation(); e.preventDefault();
+    const centerX = rod.x+rod.w/2;
+    const centerY = rod.y+rod.h/2;
+    function move(ev){
+      const dx = ev.clientX - centerX;
+      const dy = ev.clientY - centerY;
+      rod.angle = Math.atan2(dy,dx)*180/Math.PI;
+      update();
+    }
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  };
   });
 }
 
