@@ -2,18 +2,14 @@ import eventlet
 eventlet.monkey_patch()
 
 from flask import Flask, request, send_from_directory, send_file
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from flask_cors import CORS
 import os, json
 
 app = Flask(__name__)
 CORS(app)
 
-socketio = SocketIO(
-    app,
-    cors_allowed_origins="*",
-    async_mode="eventlet"
-)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 # ===== HTML =====
 @app.route("/")

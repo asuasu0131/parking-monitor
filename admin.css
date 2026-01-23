@@ -19,14 +19,19 @@ button { padding:6px 10px; margin:2px; font-size:14px; }
 }
 .rod {
   position:absolute;
-  background:#4caf50;
-  border:2px solid white;
-  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-weight:bold;
+  border:1px solid white;
   cursor:move;
-  display:flex; justify-content:center; align-items:center;
-  color:white; font-weight:bold;
+  user-select:none;
+  transform-origin:center center;
 }
-.rod.full { background:#f44336; }
+.empty { background:#4caf50; }
+.full  { background:#f44336; }
+
 .resize-handle {
   width:10px; height:10px;
   background:white; border:1px solid #333; position:absolute;

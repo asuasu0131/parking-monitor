@@ -13,18 +13,21 @@ button { padding:6px 10px; font-size:14px; margin:2px; }
   top:0; left:0;
   transform-origin: center center;
 }
-.rod{
+.rod {
   position:absolute;
   display:flex;
   align-items:center;
   justify-content:center;
-  flex-direction:column;
-  font-weight:bold;
   color:white;
-  border-radius:6px;
+  font-weight:bold;
+  border:1px solid white;
+  cursor:move;
   user-select:none;
+  transform-origin:center center;
 }
-.empty{background:#4caf50;} .full{background:#f44336;}
+.empty { background:#4caf50; }
+.full  { background:#f44336; }
+
 #user-marker{position:absolute; width:14px; height:14px; background:#2196f3; border-radius:50%; border:2px solid white; z-index:1001; top:50%; left:50%; transform:translate(-50%,-50%);}
 .user-marker-other{position:absolute;width:12px;height:12px;background:#ff9800;border:2px solid white;border-radius:50%;z-index:1000;}
 #heading-arrow {
