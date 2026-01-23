@@ -1,139 +1,95 @@
 const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
-const addRodBtn = document.getElementById("add-rod");
-const saveLayoutBtn = document.getElementById("save-layout");
 const zoomSlider = document.getElementById("zoom-slider");
+const saveBtn = document.getElementById("save-layout");
+const addRodBtn = document.getElementById("add-rod");
 
 let rods = [];
-let nodes = [];
-let dragItem = null;
-let offsetX=0, offsetY=0;
+let rodCount = 0;
 
-// ================= 初期ロッドサンプル =================
-function initRods(){
-  rods = [
-    {id:"A1", x:100, y:80},
-    {id:"A2", x:100, y:180},
-    {id:"B1", x:300, y:80},
-    {id:"B2", x:300, y:180}
-  ];
-  renderRods();
-}
-
-// ================= ロッドDOM作成 =================
-function renderRods(){
-  lot.innerHTML=""; // 一旦クリア
-  rods.forEach(r=>{
-    const d = document.createElement("div");
-    d.className="rod";
-    d.style.left=r.x+"px";
-    d.style.top=r.y+"px";
-    d.textContent=r.id;
-    lot.appendChild(d);
-    r.el = d;
-
-    // ドラッグ開始
-    d.addEventListener("mousedown", e=>{
-      dragItem = r;
-      offsetX = e.offsetX;
-      offsetY = e.offsetY;
-    });
-  });
-
-  // ノードも同じように作れる（必要なら）
-  nodes.forEach(n=>{
-    const d = document.createElement("div");
-    d.className="rod"; // 見た目は同じでOK
-    d.style.background="#ff9800";
-    d.style.left=n.x+"px";
-    d.style.top=n.y+"px";
-    d.style.width="20px";
-    d.style.height="20px";
-    d.style.fontSize="10px";
-    d.textContent="N";
-    lot.appendChild(d);
-    n.el=d;
-
-    d.addEventListener("mousedown", e=>{
-      dragItem = n;
-      offsetX = e.offsetX;
-      offsetY = e.offsetY;
-    });
-  });
-}
-
-// ================= ドラッグ操作 =================
-window.addEventListener("mousemove", e=>{
-  if(dragItem){
-    let rect = container.getBoundingClientRect();
-    dragItem.x = e.clientX - rect.left - offsetX;
-    dragItem.y = e.clientY - rect.top - offsetY;
-    dragItem.el.style.left = dragItem.x + "px";
-    dragItem.el.style.top = dragItem.y + "px";
-  }
-});
-
-window.addEventListener("mouseup", e=>{
-  dragItem=null;
-});
-
-// ================= ロッド追加 =================
-addRodBtn.addEventListener("click", ()=>{
-  const newId = "R"+(rods.length+1);
-  const newRod = {id:newId, x:50, y:50};
-  rods.push(newRod);
-  renderRods();
-});
-
-// ================= 保存 =================
-saveLayoutBtn.addEventListener("click", ()=>{
-  const layout = rods.map(r=>({
-    id:r.id,
-    x:Math.round(r.x),
-    y:Math.round(r.y),
-    status:0
-  }));
-  const blob = new Blob([JSON.stringify(layout,null,2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "parking_layout.json";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-function resizeUI() {
-    const containerRect = container.getBoundingClientRect();
-    const width = containerRect.width;
-    const height = containerRect.height;
-
-    // ロッド配置のスケーリング
-    rods.forEach(r => {
-        r.cx = r.x * (width / 900);  // 元の設計幅900pxを基準にスケーリング
-        r.cy = r.y * (height / 600); // 元の設計高さ600pxを基準にスケーリング
-        r.el.style.left = (r.cx - r.el.offsetWidth / 2) + "px";
-        r.el.style.top  = (r.cy - r.el.offsetHeight / 2) + "px";
-    });
-
-    // canvasやnodeCanvasのサイズ更新
-    canvas.width = width;
-    canvas.height = height;
-    if (typeof nodeCanvas !== 'undefined') {
-        nodeCanvas.width = width;
-        nodeCanvas.height = height;
+// ===== JSONロード時の初期ロッド =====
+async function loadLayout() {
+    try {
+        const resp = await fetch("parking_layout.json");
+        const data = await resp.json();
+        data.forEach(r => addRod(r.id, r.x, r.y, r.status));
+    } catch (e) {
+        console.log("レイアウト読み込みエラー:", e);
     }
+}
 
-    // パスを再計算
-    if (typeof recalcPath === 'function') recalcPath();
+// ===== ロッド追加 =====
+function addRod(id=null, x=50, y=50, status=0){
+    rodCount++;
+    const rodId = id || "R"+rodCount;
+    const d = document.createElement("div");
+    d.className = "rod " + (status?"full":"empty");
+    d.textContent = rodId;
+    lot.appendChild(d);
+
+    const rod = {id: rodId, x, y, status, el:d};
+    rods.push(rod);
+
+    // ドラッグ可能
+    let offsetX=0, offsetY=0, dragging=false;
+    d.addEventListener("mousedown", e=>{
+        dragging=true;
+        offsetX=e.offsetX;
+        offsetY=e.offsetY;
+        d.style.zIndex=1000;
+    });
+    window.addEventListener("mousemove", e=>{
+        if(dragging){
+            const rect = container.getBoundingClientRect();
+            rod.x = e.clientX - rect.left - offsetX;
+            rod.y = e.clientY - rect.top - offsetY;
+            d.style.left = rod.x + "px";
+            d.style.top  = rod.y + "px";
+        }
+    });
+    window.addEventListener("mouseup", ()=>{
+        dragging=false;
+        d.style.zIndex="";
+    });
+
+    // クリックで空き/満車切替
+    d.addEventListener("click", e=>{
+        if(dragging) return; // ドラッグ中は無効
+        rod.status ^=1;
+        d.className = "rod " + (rod.status?"full":"empty");
+    });
+
+    return rod;
+}
+
+// ===== UIリサイズ =====
+function resizeUI(){
+    const rect = container.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    rods.forEach(r=>{
+        r.el.style.left = r.x + "px";
+        r.el.style.top  = r.y + "px";
+    });
 }
 window.addEventListener("resize", resizeUI);
-resizeUI(); // 初期読み込み時にも呼ぶ
+resizeUI();
 
-// ================= ズーム =================
-zoomSlider.addEventListener("input", e=>{
-  const scale = e.target.value;
-  lot.style.transform = `scale(${scale})`;
+// ===== JSON保存 =====
+saveBtn.addEventListener("click", ()=>{
+    const json = rods.map(r=>({id:r.id,x:r.x,y:r.y,status:r.status}));
+    const blob = new Blob([JSON.stringify(json, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "parking_layout.json";
+    a.click();
+    URL.revokeObjectURL(url);
 });
 
-// ================= 初期化 =================
-initRods();
+// ===== 新規ロッド追加 =====
+addRodBtn.addEventListener("click", ()=>addRod());
+
+// ===== 初期ロード =====
+loadLayout();
