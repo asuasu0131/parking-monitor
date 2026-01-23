@@ -1,8 +1,4 @@
 [
-  { "id": "A1", "xRatio": 0.15, "yRatio": 0.15, "status": 0 },
-  { "id": "A2", "xRatio": 0.15, "yRatio": 0.45, "status": 1 },
-  { "id": "A3", "xRatio": 0.15, "yRatio": 0.75, "status": 0 },
-  { "id": "B1", "xRatio": 0.55, "yRatio": 0.15, "status": 0 },
-  { "id": "B2", "xRatio": 0.55, "yRatio": 0.45, "status": 1 },
-  { "id": "B3", "xRatio": 0.55, "yRatio": 0.75, "status": 0 }
+  { "id": "A1", "x": 10, "y": 10, "status": 0 },
+  { "id": "A2", "x": 20, "y": 10, "status": 0 }
 ]

@@ -1,99 +1,120 @@
-const container = document.getElementById("parking-lot-container");
-const lot = document.getElementById("parking-lot");
+const canvas = document.getElementById("parking-canvas");
+const ctx = canvas.getContext("2d");
 const zoomSlider = document.getElementById("zoom-slider");
 
-let zoomScale = 1;
+let canvasWidth, canvasHeight;
+function resizeCanvas(){
+  canvasWidth = canvas.clientWidth;
+  canvasHeight = canvas.clientHeight;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-// 🔽 ロッド共通サイズ（比率）
-let rodWidthRatio  = 0.08;
-let rodHeightRatio = 0.12;
+const socket = io();
 
-let rods = [];
+// 仮想駐車場サイズ（メートル）
+const LOT_WIDTH = 300;
+const LOT_HEIGHT = 200;
 
-async function loadLayout() {
-  try {
-    const res = await fetch("/parking_layout.json");
-    rods = await res.json();
-  } catch {
-    rods = [];
-  }
-  renderRods();
+// カメラ（表示中心座標 + ズーム）
+let camera = { x: LOT_WIDTH/2, y: LOT_HEIGHT/2, zoom: 1 };
+
+// 仮想座標のロッド
+let rods = [
+  { id:"A1", x:45, y:30, status:0 },
+  { id:"A2", x:45, y:90, status:1 },
+  { id:"A3", x:45, y:150, status:0 },
+  { id:"B1", x:165, y:30, status:0 },
+  { id:"B2", x:165, y:90, status:1 },
+  { id:"B3", x:165, y:150, status:0 }
+];
+
+// 選択中のロッド
+let selectedRod = null;
+let offset = {x:0, y:0};
+
+// 仮想座標 → 画面px
+function toScreen(vx, vy){
+  return {
+    x: (vx - camera.x) * camera.zoom + canvasWidth/2,
+    y: (vy - camera.y) * camera.zoom + canvasHeight/2
+  };
 }
 
-function renderRods() {
-  document.querySelectorAll(".rod").forEach(e => e.remove());
+// 画面px → 仮想座標
+function toVirtual(px, py){
+  return {
+    x: (px - canvasWidth/2)/camera.zoom + camera.x,
+    y: (py - canvasHeight/2)/camera.zoom + camera.y
+  };
+}
 
-  rods.forEach(r => {
-    r.wRatio ??= rodWidthRatio;
-    r.hRatio ??= rodHeightRatio;
+// 描画
+function draw(){
+  ctx.clearRect(0,0,canvasWidth,canvasHeight);
 
-    const d = document.createElement("div");
-    d.className = "rod " + (r.status === 0 ? "empty" : "full");
-    d.innerHTML = `${r.id}<br>${r.status === 0 ? "空き" : "使用中"}`;
+  // 背景
+  ctx.fillStyle = "#bfbfbf";
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
-    lot.appendChild(d);
+  // ロッド描画
+  rods.forEach(r=>{
+    const {x,y} = toScreen(r.x,r.y);
+    const size = 5 * camera.zoom; // 点として小さく表示
+    ctx.fillStyle = r.status===0?"#4caf50":"#f44336";
+    ctx.fillRect(x-size/2, y-size/2, size, size);
+  });
+}
 
-    function update() {
-      d.style.left   = (r.xRatio * container.clientWidth) + "px";
-      d.style.top    = (r.yRatio * container.clientHeight) + "px";
-      d.style.width  = (r.wRatio * container.clientWidth) + "px";
-      d.style.height = (r.hRatio * container.clientHeight) + "px";
+// ドラッグ操作
+canvas.onmousedown = (e)=>{
+  const mouse = toVirtual(e.offsetX,e.offsetY);
+  // 近いロッドを探す
+  for(let r of rods){
+    if(Math.abs(r.x - mouse.x)<2 && Math.abs(r.y - mouse.y)<2){
+      selectedRod = r;
+      offset.x = mouse.x - r.x;
+      offset.y = mouse.y - r.y;
+      break;
     }
-
-    update();
-    window.addEventListener("resize", update);
-
-    // ===== ドラッグ移動 =====
-    d.onmousedown = e => {
-      e.preventDefault();
-      const rect = container.getBoundingClientRect();
-
-      function move(ev) {
-        r.xRatio = (ev.clientX - rect.left) / rect.width;
-        r.yRatio = (ev.clientY - rect.top) / rect.height;
-        r.xRatio = Math.min(Math.max(r.xRatio, 0), 1);
-        r.yRatio = Math.min(Math.max(r.yRatio, 0), 1);
-        update();
-      }
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", () => {
-        document.removeEventListener("mousemove", move);
-      }, { once:true });
-    };
-
-    // ダブルクリックで状態切替
-    d.ondblclick = () => {
-      r.status = r.status === 0 ? 1 : 0;
-      d.className = "rod " + (r.status === 0 ? "empty" : "full");
-      d.innerHTML = `${r.id}<br>${r.status === 0 ? "空き" : "使用中"}`;
-    };
-  });
-}
-
-document.getElementById("add-rod").onclick = () => {
-  rods.push({
-    id: "R" + (rods.length + 1),
-    xRatio: 0.5,
-    yRatio: 0.5,
-    wRatio: rodWidthRatio,
-    hRatio: rodHeightRatio,
-    status: 0
-  });
-  renderRods();
+  }
 };
 
-document.getElementById("save-layout").onclick = async () => {
-  await fetch("/save_layout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(rods)
-  });
-  alert("保存しました");
+canvas.onmousemove = (e)=>{
+  if(selectedRod){
+    const mouse = toVirtual(e.offsetX,e.offsetY);
+    selectedRod.x = mouse.x - offset.x;
+    selectedRod.y = mouse.y - offset.y;
+  }
 };
 
-zoomSlider.addEventListener("input", () => {
-  zoomScale = parseFloat(zoomSlider.value);
-  lot.style.transform = `scale(${zoomScale})`;
+canvas.onmouseup = ()=>{ selectedRod = null; };
+canvas.onmouseleave = ()=>{ selectedRod = null; };
+
+// ズーム
+zoomSlider.addEventListener("input", ()=>{
+  camera.zoom = parseFloat(zoomSlider.value);
 });
 
-loadLayout();
+// 保存
+document.getElementById("save-layout").onclick = async ()=>{
+  const res = await fetch("/save_layout",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(rods)
+  });
+  if(res.ok) alert("保存しました");
+  socket.emit("layout_updated");
+};
+
+// 追加
+document.getElementById("add-rod").onclick = ()=>{
+  rods.push({id:"R"+(rods.length+1), x:LOT_WIDTH/2, y:LOT_HEIGHT/2, status:0});
+};
+
+(function loop(){
+  draw();
+  requestAnimationFrame(loop);
+})();
