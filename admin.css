@@ -2,23 +2,39 @@ body { font-family:sans-serif; background:#cfcfcf; padding:8px; margin:0; text-a
 h1 { font-size:clamp(18px,4vw,26px); margin:6px 0; }
 button { padding:6px 10px; margin:2px; font-size:14px; }
 #controls { margin:10px 0; }
-#zoom-slider { width:80%; margin:10px auto; }
-#parking-lot-container {
-  position:relative; width:100%; max-width:900px; aspect-ratio:9/6.5;
-  margin:auto; overflow:hidden; border-radius:10px; background:#bfbfbf; cursor:crosshair;
-}
-#parking-lot { position:absolute; width:100%; height:100%; top:0; left:0; transform-origin:center center; }
-.rod{
-  position:absolute;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  font-weight:bold;
-  color:white;
-  border-radius:6px;
-  user-select:none;
-}
-.empty { background:#4caf50; }
-.full  { background:#f44336; }
+#zoom-slider { width:200px; }
 
+#parking-lot-container {
+  position:relative;
+  width:100%; height:600px;
+  overflow:scroll; border:1px solid #888; background:#bfbfbf;
+  cursor:grab;
+}
+#parking-lot {
+  position:relative;
+  width:2000px;  /* 200mをpx換算 */
+  height:1000px; /* 100mをpx換算 */
+  background:#ddd;
+  transform-origin:top left;
+}
+.rod {
+  position:absolute;
+  background:#4caf50;
+  border:2px solid white;
+  box-sizing:border-box;
+  cursor:move;
+  display:flex; justify-content:center; align-items:center;
+  color:white; font-weight:bold;
+}
+.rod.full { background:#f44336; }
+.resize-handle {
+  width:10px; height:10px;
+  background:white; border:1px solid #333; position:absolute;
+  bottom:0; right:0; cursor:se-resize;
+}
+.rotate-handle {
+  width:12px; height:12px;
+  background:red; border-radius:50%;
+  position:absolute; top:-16px; left:50%; transform:translateX(-50%); cursor:pointer;
+}
+.selected { outline:2px dashed blue; }

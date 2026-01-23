@@ -1,105 +1,147 @@
-const canvas = document.getElementById("lotCanvas");
-const ctx = canvas.getContext("2d");
+const container = document.getElementById("parking-lot-container");
+const lot = document.getElementById("parking-lot");
+const zoomSlider = document.getElementById("zoom-slider");
 const socket = io();
 
-let rods = []; // {id,x,y,width,height,status}
-const LOT_WIDTH = 200;  // m
-const LOT_HEIGHT = 100; // m
+let zoom = 1;
+let rods = [];
+let selectedRod = null;
 
-// Canvasサイズに応じて変換
-function resizeCanvas(){
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight;
-}
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+function createRod(id, x=100, y=100, w=80, h=50, angle=0, status=0){
+  const rod = {id,x,y,w,h,angle,status};
+  rods.push(rod);
 
-// カメラ
-let camera = { x: LOT_WIDTH/2, y: LOT_HEIGHT/2, zoom: 4 };
-let isPanning = false, panStart = {x:0,y:0};
+  const d = document.createElement("div");
+  d.className = "rod "+(status? "full":"empty");
+  d.innerHTML = id;
+  lot.appendChild(d);
+  rod.el = d;
 
-// マウス操作
-canvas.onmousedown = (e)=>{
-  if(e.button===2 || e.shiftKey){ // 右クリック or shift+左クリックでパン
-    isPanning = true;
-    panStart.x = e.clientX;
-    panStart.y = e.clientY;
-  } else {
-    // ロッド移動判定
-    const mx = (e.offsetX - canvas.width/2)/camera.zoom + camera.x;
-    const my = (e.offsetY - canvas.height/2)/camera.zoom + camera.y;
-    for(let r of rods){
-      if(mx>=r.x && mx<=r.x+r.width && my>=r.y && my<=r.y+r.height){
-        selectedRod = r;
-        dragOffset = {x: mx - r.x, y: my - r.y};
-        break;
-      }
+  const resize = document.createElement("div");
+  resize.className="resize-handle";
+  d.appendChild(resize);
+
+  const rotate = document.createElement("div");
+  rotate.className="rotate-handle";
+  d.appendChild(rotate);
+
+  function update(){
+    d.style.width = rod.w+"px";
+    d.style.height = rod.h+"px";
+    d.style.left = rod.x+"px";
+    d.style.top = rod.y+"px";
+    d.style.transform = `rotate(${rod.angle}deg)`;
+  }
+  update();
+
+  // 選択
+  d.onclick = (e)=>{
+    selectedRod = rod;
+    rods.forEach(r=>r.el.classList.remove("selected"));
+    d.classList.add("selected");
+    e.stopPropagation();
+  }
+
+  // 移動
+  d.onmousedown = (e)=>{
+    if(e.target===resize||e.target===rotate) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = rod.x;
+    const origY = rod.y;
+    function move(ev){
+      rod.x = origX + (ev.clientX-startX)/zoom;
+      rod.y = origY + (ev.clientY-startY)/zoom;
+      update();
     }
-  }
-};
-let selectedRod=null, dragOffset={x:0,y:0};
-canvas.onmousemove = (e)=>{
-  if(isPanning){
-    const dx = (panStart.x - e.clientX)/camera.zoom;
-    const dy = (panStart.y - e.clientY)/camera.zoom;
-    camera.x += dx; camera.y += dy;
-    panStart.x = e.clientX; panStart.y = e.clientY;
-  }
-  if(selectedRod){
-    const mx = (e.offsetX - canvas.width/2)/camera.zoom + camera.x;
-    const my = (e.offsetY - canvas.height/2)/camera.zoom + camera.y;
-    selectedRod.x = mx - dragOffset.x;
-    selectedRod.y = my - dragOffset.y;
-  }
-};
-canvas.onmouseup = ()=>{ isPanning=false; selectedRod=null; };
-canvas.onmouseleave = ()=>{ isPanning=false; selectedRod=null; };
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  };
 
-// ホイールでズーム
-canvas.onwheel = (e)=>{
-  e.preventDefault();
-  const factor = 1.1;
-  if(e.deltaY < 0) camera.zoom *= factor;
-  else camera.zoom /= factor;
-};
+  // サイズ変更
+  resize.onmousedown = (e)=>{
+    e.stopPropagation(); e.preventDefault();
+    const startX=e.clientX, startY=e.clientY;
+    const origW=rod.w, origH=rod.h;
+    function move(ev){
+      rod.w = Math.max(20, origW+(ev.clientX-startX)/zoom);
+      rod.h = Math.max(10, origH+(ev.clientY-startY)/zoom);
+      update();
+    }
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  };
 
-// 描画
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // 回転
+  rotate.onmousedown = (e)=>{
+    e.stopPropagation(); e.preventDefault();
+    const centerX = rod.x+rod.w/2;
+    const centerY = rod.y+rod.h/2;
+    function move(ev){
+      const dx = ev.clientX - centerX;
+      const dy = ev.clientY - centerY;
+      rod.angle = Math.atan2(dy,dx)*180/Math.PI;
+      update();
+    }
+    function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);}
+    document.addEventListener("mousemove",move);
+    document.addEventListener("mouseup",up);
+  };
 
-  // 背景
-  ctx.fillStyle="#bfbfbf";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // ロッド描画
-  for(let r of rods){
-    const sx = (r.x - camera.x)*camera.zoom + canvas.width/2;
-    const sy = (r.y - camera.y)*camera.zoom + canvas.height/2;
-    const sw = r.width*camera.zoom;
-    const sh = r.height*camera.zoom;
-    ctx.fillStyle = r.status===0?"#4caf50":"#f44336";
-    ctx.fillRect(sx, sy, sw, sh);
-    ctx.fillStyle="#fff";
-    ctx.font = `${Math.max(8, sw/3)}px sans-serif`;
-    ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillText(r.id, sx+sw/2, sy+sh/2);
+  // ダブルクリックで状態変更
+  d.ondblclick = ()=>{
+    rod.status = rod.status?0:1;
+    d.className="rod "+(rod.status? "full":"empty");
   }
 
-  requestAnimationFrame(draw);
+  return rod;
 }
-requestAnimationFrame(draw);
 
-// ロッド追加
-document.getElementById("add-rod").onclick = ()=>{
-  rods.push({id:"R"+(rods.length+1), x:50, y:50, width:4, height:2, status:0});
-};
+// 初期ロッド
+createRod("A1",100,100);
+createRod("B1",300,100);
+
+zoomSlider.addEventListener("input",()=>{
+  zoom = parseFloat(zoomSlider.value);
+  lot.style.transform = `scale(${zoom})`;
+});
+
+// パン
+let isPanning=false, panStartX=0, panStartY=0, origScrollLeft=0, origScrollTop=0;
+container.addEventListener("mousedown",(e)=>{
+  if(!e.shiftKey) return;
+  isPanning=true; panStartX=e.clientX; panStartY=e.clientY;
+  origScrollLeft=container.scrollLeft; origScrollTop=container.scrollTop;
+});
+document.addEventListener("mousemove",(e)=>{
+  if(!isPanning) return;
+  container.scrollLeft = origScrollLeft-(e.clientX-panStartX);
+  container.scrollTop  = origScrollTop-(e.clientY-panStartY);
+});
+document.addEventListener("mouseup",(e)=>{ isPanning=false; });
+
+// 背景クリックで選択解除
+lot.addEventListener("click",()=>{ selectedRod=null; rods.forEach(r=>r.el.classList.remove("selected")); });
+
+// Deleteキーで削除
+document.addEventListener("keydown",(e)=>{
+  if(e.key==="Delete" && selectedRod){
+    lot.removeChild(selectedRod.el);
+    rods = rods.filter(r=>r!==selectedRod);
+    selectedRod=null;
+  }
+});
 
 // 保存
 document.getElementById("save-layout").onclick = async ()=>{
-  const res = await fetch("/save_layout", {
+  const saveData = rods.map(r=>({id:r.id,x:r.x,y:r.y,w:r.w,h:r.h,angle:r.angle,status:r.status}));
+  const res = await fetch("/save_layout",{
     method:"POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(rods)
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify(saveData)
   });
   if(res.ok) alert("保存しました");
   else alert("保存失敗");
