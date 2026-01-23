@@ -1,39 +1,52 @@
-from flask import Flask, send_from_directory, request, jsonify
-import os
+import eventlet
+eventlet.monkey_patch()
+
+from flask import Flask, request, send_from_directory, send_file
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
+import os, json
 
 app = Flask(__name__)
+CORS(app)
 
-# ===== センサ状態保持 =====
-sensor_data = {"CH0": 0, "CH1": 0}
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet"
+)
 
-# ===== ルート =====
+# ===== HTML =====
 @app.route("/")
-def index():
+def virtual():
     return send_from_directory(".", "virtual.html")
 
-# ===== CSS / JS / その他静的ファイル =====
+@app.route("/admin")
+def admin():
+    return send_from_directory(".", "admin.html")
+
+# ===== static =====
 @app.route("/<path:filename>")
 def static_files(filename):
-    return send_from_directory(".", filename)
+    if filename.endswith((".css", ".js", ".json")):
+        return send_from_directory(".", filename)
+    return "Not Found", 404
 
-# ===== センサ状態更新（ラズパイからPOST） =====
-@app.route("/update_sensor", methods=["POST"])
-def update_sensor():
-    global sensor_data
+# ===== JSON 保存 =====
+@app.route("/save_layout", methods=["POST"])
+def save_layout():
     data = request.get_json()
-    if "CH0" in data and "CH1" in data:
-        sensor_data["CH0"] = int(data["CH0"])
-        sensor_data["CH1"] = int(data["CH1"])
-        return jsonify({"status": "ok"})
-    return jsonify({"status": "error"}), 400
+    with open("parking_layout.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-# ===== センサ状態取得（UI側でGET） =====
-@app.route("/get_sensor")
-def get_sensor():
-    return jsonify(sensor_data)
+    socketio.emit("layout_updated")
+    return {"status": "ok"}
 
-# ===== メイン =====
+# ===== JSON 取得 =====
+@app.route("/parking_layout.json")
+def get_layout():
+    return send_file("parking_layout.json")
+
+# ===== 起動 =====
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"Starting server on 0.0.0.0:{port}")
-    app.run(host="0.0.0.0", port=port)
+    socketio.run(app, host="0.0.0.0", port=port)
