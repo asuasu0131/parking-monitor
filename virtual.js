@@ -13,33 +13,43 @@ async function loadLayout() {
   const res = await fetch("/parking_layout.json");
   const data = await res.json();
 
-  // データが {parking: {...}, rods: [...]} ならそのまま使用
   if(data.parking && data.rods){
     parking = data.parking;
     rods = data.rods;
   } else {
-    // 従来のJSON形式なら rods のみ
     rods = data;
-    parking = { width:200, height:100 }; // 仮初期値
+    parking = { width:200, height:100 };
   }
 
   renderRods();
 }
 
 function renderRods() {
-  document.querySelectorAll(".rod, .parking-area").forEach(e => e.remove());
+  // 既存の描画を削除
+  document.querySelectorAll(".rod, .parking-area, .parking-outside").forEach(e => e.remove());
 
-  // スケール計算
-  let scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
+  // scale計算
+  let scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
 
-  // lotサイズ
-  lot.style.width  = parking.width * scale + "px";
-  lot.style.height = parking.height * scale + "px";
+  // lotサイズ（敷地外まで描画）
+  const outerWidth = container.clientWidth;
+  const outerHeight = container.clientHeight;
+  lot.style.width = outerWidth + "px";
+  lot.style.height = outerHeight + "px";
 
-  // 敷地外を #888 に
-  lot.style.background = "#888";
+  // 敷地外
+  const outside = document.createElement("div");
+  outside.className = "parking-outside";
+  outside.style.position = "absolute";
+  outside.style.left = "0px";
+  outside.style.top  = "0px";
+  outside.style.width  = outerWidth + "px";
+  outside.style.height = outerHeight + "px";
+  outside.style.background = "#888";  // 敷地外色
+  outside.style.zIndex = 0;
+  lot.appendChild(outside);
 
-  // 敷地色 (#bfbfbf)
+  // 敷地内
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -47,8 +57,9 @@ function renderRods() {
   parkingArea.style.top  = "0px";
   parkingArea.style.width  = parking.width * scale + "px";
   parkingArea.style.height = parking.height * scale + "px";
-  parkingArea.style.background = "#bfbfbf";
-  parkingArea.style.zIndex = 0;
+  parkingArea.style.background = "#bfbfbf"; // 敷地内色
+  parkingArea.style.border = "2px solid #000"; // 枠線
+  parkingArea.style.zIndex = 1;
   lot.appendChild(parkingArea);
 
   // ロッド描画
@@ -57,10 +68,10 @@ function renderRods() {
     d.className = "rod " + (r.status===0?"empty":"full");
     d.style.left = r.x * scale + "px";
     d.style.top  = r.y * scale + "px";
-    d.style.width = (r.width || 2.5) * scale + "px"; // 既存JSONは width がない場合
+    d.style.width = (r.width || 2.5) * scale + "px";
     d.style.height = (r.height || 5) * scale + "px";
     d.style.transform = `rotate(${r.angle || 0}deg)`;
-    d.style.zIndex = 1;
+    d.style.zIndex = 2;
     lot.appendChild(d);
   });
 }
