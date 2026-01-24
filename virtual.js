@@ -234,41 +234,39 @@ function renderAll() {
   });
 
 if (targetRod) {
-  let path = findPath(user, { x: targetRod.x, y: targetRod.y }, allNodes);
+    let path = findPath(user, { x: targetRod.x, y: targetRod.y }, allNodes);
 
-  // pathの最後にロッド座標を追加
-  if (path.length > 0) {
-    path.push({ x: targetRod.x, y: targetRod.y });
-  }
+    // pathの最後にロッド座標を追加
+    if (path.length > 0) {
+        path.push({ x: targetRod.x, y: targetRod.y });
+    }
 
-  const smoothPath = catmullRomSpline(path);
+    // SVG 用意
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "path-svg";
+    svg.style.position = "absolute";
+    svg.style.left = "0";
+    svg.style.top = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.pointerEvents = "none";
+    svg.style.zIndex = 2;
+    lot.appendChild(svg);
 
-  // SVG 用意
-  let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.id = "path-svg";
-  svg.style.position = "absolute";
-  svg.style.left = "0";
-  svg.style.top = "0";
-  svg.style.width = "100%";
-  svg.style.height = "100%";
-  svg.style.pointerEvents = "none";
-  svg.style.zIndex = 2;
-  lot.appendChild(svg);
-
-  // path を描画
-  let d = `M ${smoothPath[0].x*scale} ${smoothPath[0].y*scale}`;
-  for (let i = 1; i < smoothPath.length; i++) {
-    d += ` L ${smoothPath[i].x*scale} ${smoothPath[i].y*scale}`;
-  }
-  const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
-  pathEl.setAttribute("d", d);
-  pathEl.setAttribute("stroke","#2196f3");
-  pathEl.setAttribute("stroke-width","6");
-  pathEl.setAttribute("fill","none");
-  pathEl.setAttribute("stroke-linecap","round");
-  pathEl.setAttribute("stroke-linejoin","round");
-  svg.appendChild(pathEl);
-}
+    // path を描画（ノードを直線でつなぐ）
+    let d = `M ${path[0].x*scale} ${path[0].y*scale}`;
+    for (let i = 1; i < path.length; i++) {
+        d += ` L ${path[i].x*scale} ${path[i].y*scale}`;
+    }
+    const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
+    pathEl.setAttribute("d", d);
+    pathEl.setAttribute("stroke","#2196f3");
+    pathEl.setAttribute("stroke-width","6");
+    pathEl.setAttribute("fill","none");
+    pathEl.setAttribute("stroke-linecap","round");
+    pathEl.setAttribute("stroke-linejoin","round");
+    svg.appendChild(pathEl);
+    }
 }
 
 // ===== ユーザ移動 =====
