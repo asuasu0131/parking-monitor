@@ -26,28 +26,17 @@ async function loadLayout() {
 
 function renderRods() {
   // 既存の描画を削除
-  document.querySelectorAll(".rod, .parking-area, .parking-outside").forEach(e => e.remove());
+  document.querySelectorAll(".rod, .parking-area").forEach(e => e.remove());
 
   // scale計算
   let scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
 
-  // lotサイズ（敷地外まで描画）
-  const outerWidth = container.clientWidth;
-  const outerHeight = container.clientHeight;
-  lot.style.width = outerWidth + "px";
-  lot.style.height = outerHeight + "px";
+  // lotサイズを敷地内サイズにする（敷地外は container 背景で表現）
+  lot.style.width = parking.width * scale + "px";
+  lot.style.height = parking.height * scale + "px";
 
-  // 敷地外
-  const outside = document.createElement("div");
-  outside.className = "parking-outside";
-  outside.style.position = "absolute";
-  outside.style.left = "0px";
-  outside.style.top  = "0px";
-  outside.style.width  = outerWidth + "px";
-  outside.style.height = outerHeight + "px";
-  outside.style.background = "#888";  // 敷地外色
-  outside.style.zIndex = 0;
-  lot.appendChild(outside);
+  // container背景を敷地外色に設定
+  container.style.background = "#888";
 
   // 敷地内
   const parkingArea = document.createElement("div");
