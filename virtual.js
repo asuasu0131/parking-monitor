@@ -11,30 +11,32 @@ const userSpeed = 1;
 const socket = io();
 let userMarker = null;
 
-// 既存コードの先頭に追加
+// ===== 座標変換・背景設定 =====
 function latLngToPixel(lat, lng, zoom) {
   const sinLat = Math.sin(lat * Math.PI / 180);
   const x = ((lng + 180) / 360) * 256 * Math.pow(2, zoom);
   const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * 256 * Math.pow(2, zoom);
   return { x, y };
 }
+
 function getTileUrl(x, y, z) {
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 }
+
 function setAerialBackground(container, parking) {
-  if(!parking.lat1 || !parking.lat2) return;
+  if (!parking.lat1 || !parking.lat2 || !parking.lng1 || !parking.lng2) return;
   const zoom = 19;
   const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
   const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
   const widthPx = Math.abs(bottomRight.x - topLeft.x);
   const heightPx = Math.abs(bottomRight.y - topLeft.y);
-  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x/256), Math.floor(topLeft.y/256), zoom)})`;
+  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x / 256), Math.floor(topLeft.y / 256), zoom)})`;
   container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
   container.style.backgroundPosition = `0px 0px`;
   container.style.backgroundRepeat = "no-repeat";
 }
 
-// 仮想ノード生成（線だけの経路も分割）
+// ===== 仮想ノード生成 =====
 function generateVirtualNodes(allNodes, step = 5) {
   const virtualNodes = [];
   allNodes.forEach(n => {
@@ -49,18 +51,16 @@ function generateVirtualNodes(allNodes, step = 5) {
         const y = n.y + (neighbor.y - n.y) * i / steps;
         virtualNodes.push({ id: `v-${n.id}-${neighbor.id}-${i}`, x, y, neighbors: [] });
       }
-      // 端点も追加
       virtualNodes.push({ ...neighbor });
     });
     virtualNodes.push({ ...n });
   });
 
-  // 接続
   virtualNodes.forEach(vn => {
     allNodes.concat(virtualNodes).forEach(n2 => {
       if (vn === n2) return;
       const d = Math.hypot(vn.x - n2.x, vn.y - n2.y);
-      if (d < step + 0.1) { // 隣接とみなす
+      if (d < step + 0.1) {
         if (!vn.neighbors.includes(n2.id)) vn.neighbors.push(n2.id);
         if (!n2.neighbors.includes(vn.id)) n2.neighbors.push(vn.id);
       }
@@ -70,7 +70,7 @@ function generateVirtualNodes(allNodes, step = 5) {
   return allNodes.concat(virtualNodes);
 }
 
-// 管理者レイアウト取得
+// ===== 管理者レイアウト取得 =====
 async function loadLayout() {
   const res = await fetch("/parking_layout.json");
   const data = await res.json();
@@ -79,6 +79,7 @@ async function loadLayout() {
     rods = data.rods;
     nodes = data.nodes;
   }
+
   if (!userMarker) {
     userMarker = document.createElement("div");
     userMarker.id = "user-marker";
@@ -91,7 +92,8 @@ async function loadLayout() {
     userMarker.style.zIndex = 1001;
     lot.appendChild(userMarker);
   }
-  setAerialBackground(container, parking); // ← ここで背景設定
+
+  setAerialBackground(container, parking); // 背景設定
   renderAll();
 }
 
@@ -151,7 +153,7 @@ function renderAll() {
 
   container.style.background = "#888";
 
-  // 敷地内
+  // 敷地
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -177,14 +179,14 @@ function renderAll() {
     lot.appendChild(d);
   });
 
-  // ユーザマーカー位置更新
+  // ユーザーマーカー
   userMarker.style.left = user.x * scale + "px";
   userMarker.style.top = user.y * scale + "px";
 
   // 仮想ノード生成
   const allNodes = generateVirtualNodes(nodes, 5);
 
-  // 最短経路
+  // 最短経路計算
   const emptyRods = rods.filter(r => r.status === 0);
   let targetRod = null;
   let minDist = Infinity;
@@ -223,7 +225,7 @@ function renderAll() {
   }
 }
 
-// ユーザ移動
+// ===== ユーザ移動 =====
 document.addEventListener("keydown", e => {
   switch (e.key) {
     case "ArrowUp": user.y -= userSpeed; break;
@@ -234,7 +236,7 @@ document.addEventListener("keydown", e => {
   renderAll();
 });
 
-// ズーム
+// ===== ズーム =====
 zoomSlider.addEventListener("input", () => { zoomScale = parseFloat(zoomSlider.value); });
 
 // 初期化
