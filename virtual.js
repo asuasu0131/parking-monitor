@@ -149,9 +149,31 @@ function findPath(startPos, targetPos, allNodes) {
   return [];
 }
 
+// ===== Catmull-Rom スプライン関数 =====
+function catmullRomSpline(points, tension = 0.5, numPoints = 10) {
+  if (points.length < 2) return [];
+  const result = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+
+    for (let t = 0; t <= 1; t += 1 / numPoints) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const x = 0.5 * ((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x-3*p2.x+p3.x)*t3);
+      const y = 0.5 * ((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y-3*p2.y+p3.y)*t3);
+      result.push({ x, y });
+    }
+  }
+  result.push(points[points.length-1]);
+  return result;
+}
+
 // ===== 描画 =====
 function renderAll() {
-  document.querySelectorAll(".rod,.path-line,.parking-area").forEach(e => e.remove());
+  document.querySelectorAll(".rod,.path-line,.parking-area,#path-svg").forEach(e => e.remove());
 
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
   lot.style.width = parking.width * scale + "px";
@@ -213,21 +235,33 @@ function renderAll() {
 
   if (targetRod) {
     const path = findPath(user, { x: targetRod.x, y: targetRod.y }, allNodes);
-    for (let i = 0; i < path.length - 1; i++) {
-      const line = document.createElement("div");
-      line.className = "path-line";
-      const x1 = path[i].x * scale, y1 = path[i].y * scale;
-      const x2 = path[i + 1].x * scale, y2 = path[i + 1].y * scale;
-      const length = Math.hypot(x2 - x1, y2 - y1);
-      line.style.position = "absolute";
-      line.style.left = x1 + "px"; line.style.top = y1 + "px";
-      line.style.width = length + "px"; line.style.height = "3px";
-      line.style.background = "#2196f3";
-      line.style.transform = `rotate(${Math.atan2(y2 - y1, x2 - x1)}rad)`;
-      line.style.transformOrigin = "0 0";
-      line.style.zIndex = 2;
-      lot.appendChild(line);
+    const smoothPath = catmullRomSpline(path);
+
+    // SVG 用意
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "path-svg";
+    svg.style.position = "absolute";
+    svg.style.left = "0";
+    svg.style.top = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.pointerEvents = "none";
+    svg.style.zIndex = 2;
+    lot.appendChild(svg);
+
+    // path を描画
+    let d = `M ${smoothPath[0].x*scale} ${smoothPath[0].y*scale}`;
+    for (let i = 1; i < smoothPath.length; i++) {
+      d += ` L ${smoothPath[i].x*scale} ${smoothPath[i].y*scale}`;
     }
+    const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
+    pathEl.setAttribute("d", d);
+    pathEl.setAttribute("stroke","#2196f3");
+    pathEl.setAttribute("stroke-width","6");
+    pathEl.setAttribute("fill","none");
+    pathEl.setAttribute("stroke-linecap","round");
+    pathEl.setAttribute("stroke-linejoin","round");
+    svg.appendChild(pathEl);
   }
 }
 
