@@ -132,8 +132,25 @@ function renderAll(){
   userMarker.style.top=user.y*scale+"px";
   lot.appendChild(userMarker);
 
-  // 最短経路（空きロッドまで）
-  const targetRod = rods.find(r=>r.status===0);
+  // ===== 最短経路（空きロッドまで） =====
+  const emptyRods = rods.filter(r=>r.status===0);
+  let targetRod = null;
+  let minDist = Infinity;
+
+  emptyRods.forEach(r=>{
+    const path = findPath(user, {x:r.x, y:r.y});
+    if(path.length>0){
+      let dist = 0;
+      for(let i=0;i<path.length-1;i++){
+        dist += Math.hypot(path[i+1].x-path[i].x, path[i+1].y-path[i].y);
+      }
+      if(dist<minDist){
+        minDist = dist;
+        targetRod = r;
+      }
+    }
+  });
+
   if(targetRod){
     const path = findPath(user, {x:targetRod.x, y:targetRod.y});
     for(let i=0;i<path.length-1;i++){
