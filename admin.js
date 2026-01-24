@@ -27,45 +27,29 @@ function calcParkingSize() {
   parking.height = Math.abs(latDist);
 }
 
-// ===== 緯度経度 → Web Mercator =====
-function latLngToPixel(lat, lng, zoom) {
-  const sinLat = Math.sin(lat * Math.PI / 180);
-  return {
-    x: ((lng + 180) / 360) * 256 * Math.pow(2, zoom),
-    y: (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI))
-        * 256 * Math.pow(2, zoom)
-  };
-}
-
-// ===== タイルURL（Esri 無料）=====
-function getTileUrl(x, y, z) {
-  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
-}
-
-// ===== 背景設定 =====
+// ===== 背景画像設定（ローカル画像）=====
 function setAerialBackground() {
-  if (!parking.lat1 || !parking.lat2) return;
+  if (!parking.width || !parking.height) return;
 
-  const zoom = 19;
-  const centerLat = (parking.lat1 + parking.lat2) / 2;
-  const centerLng = (parking.lng1 + parking.lng2) / 2;
-
-  const center = latLngToPixel(centerLat, centerLng, zoom);
-  const tileX = Math.floor(center.x / 256);
-  const tileY = Math.floor(center.y / 256);
-
+  // 画像が既にあれば削除
   if (aerialImg) aerialImg.remove();
 
   aerialImg = document.createElement("img");
-  aerialImg.src = getTileUrl(tileX, tileY, zoom);
+  aerialImg.src = "parking_bg.png"; // ローカル画像
   aerialImg.style.position = "absolute";
-  aerialImg.style.width = "512px";
-  aerialImg.style.height = "512px";
-  aerialImg.style.left = "50%";
-  aerialImg.style.top = "50%";
-  aerialImg.style.transform = "translate(-50%, -50%)";
   aerialImg.style.pointerEvents = "none";
   aerialImg.style.zIndex = 0;
+
+  // 駐車場のサイズに合わせる
+  const scale = Math.min(
+    container.clientWidth / parking.width,
+    container.clientHeight / parking.height
+  );
+  aerialImg.style.width  = parking.width * scale + "px";
+  aerialImg.style.height = parking.height * scale + "px";
+  aerialImg.style.left   = "50%";
+  aerialImg.style.top    = "50%";
+  aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
 
   lot.prepend(aerialImg);
 }
@@ -169,10 +153,13 @@ document.getElementById("add-rod").onclick = ()=>{
 // ===== ズーム =====
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);
+  if(aerialImg){
+    aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
+  }
   lot.style.transform = `scale(${zoomScale})`;
 };
 
-// 初期化
+// ===== 初期化 =====
 calcParkingSize();
 setAerialBackground();
 render();
