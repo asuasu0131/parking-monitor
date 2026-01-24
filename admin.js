@@ -29,11 +29,12 @@ function render() {
   document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
 
+  // lot は敷地内サイズに合わせる
   lot.style.width  = parking.width  * scale + "px";
   lot.style.height = parking.height * scale + "px";
-  lot.style.background = "transparent"; // 背景は透明
+  lot.style.background = "transparent";
 
-  // ===== 敷地内（灰色 + グリッド） =====
+  // ===== 敷地内（薄い灰色 + グリッド） =====
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -41,11 +42,11 @@ function render() {
   parkingArea.style.top  = "0px";
   parkingArea.style.width  = parking.width * scale + "px";
   parkingArea.style.height = parking.height * scale + "px";
-  parkingArea.style.background = "#bfbfbf"; // 薄い灰色
+  parkingArea.style.backgroundColor = "#bfbfbf"; // 薄い灰色
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
 
-  // グリッド描画
+  // グリッドを敷地内に表示
   const gridPx = GRID_M * scale;
   parkingArea.style.backgroundImage = `
     linear-gradient(to right, #aaa 1px, transparent 1px),
