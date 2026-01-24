@@ -31,9 +31,6 @@ function calcParkingSize() {
 function setAerialBackground() {
   if (!parking.width || !parking.height) return;
 
-  // 画像が既にあれば削除
-  if (aerialImg) aerialImg.remove();
-
   aerialImg = document.createElement("img");
   aerialImg.src = "parking_bg.png"; // ローカル画像
   aerialImg.style.position = "absolute";
