@@ -20,21 +20,31 @@ function latLngToPixel(lat, lng, zoom) {
   return { x, y };
 }
 
-function getTileUrl(x, y, z) {
-  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
-}
-
+// ===== 座標変換・背景設定（管理者UIと同じ背景画像に変更） =====
 function setAerialBackground(container, parking) {
-  if (!parking.lat1 || !parking.lat2 || !parking.lng1 || !parking.lng2) return;
-  const zoom = 19;
-  const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
-  const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
-  const widthPx = Math.abs(bottomRight.x - topLeft.x);
-  const heightPx = Math.abs(bottomRight.y - topLeft.y);
-  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x / 256), Math.floor(topLeft.y / 256), zoom)})`;
-  container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
-  container.style.backgroundPosition = `0px 0px`;
-  container.style.backgroundRepeat = "no-repeat";
+  if (aerialImg) aerialImg.remove();
+
+  aerialImg = document.createElement("img");
+  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
+  aerialImg.alt = "Parking Background";
+  Object.assign(aerialImg.style, {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    pointerEvents: "none",
+    zIndex: 0,
+    display: "block",
+    maxWidth: "none",
+    maxHeight: "none"
+  });
+
+  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
+  aerialImg.style.width  = parking.width * scale + "px";
+  aerialImg.style.height = parking.height * scale + "px";
+  aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
+
+  lot.prepend(aerialImg);
+  lot.style.position = "relative";
 }
 
 // layout_updated イベント受信で再ロード
