@@ -11,7 +11,7 @@ const ROD_HEIGHT_M = 5.0;
 const GRID_M = 5;
 
 // ===== 駐車場情報 =====
-let parking = { lat1:35.0, lng1:135.0, lat2:34.999, lng2:135.002, width:0, height:0 };
+let parking = { lat1:38.16686, lng1:140.86395, lat2:38.16616, lng2:140.86528, width:0, height:0 };
 let rods = [];
 let nodes = [];
 
@@ -27,44 +27,39 @@ function calcParkingSize() {
   parking.height = Math.abs(latDist);
 }
 
-// ===== 背景画像設定（ローカル画像）=====
+// ===== 背景画像設定（GitHub 画像）=====
 function setAerialBackground() {
   if (!parking.width || !parking.height) return;
 
-  // 既存の画像を削除
   if (aerialImg) aerialImg.remove();
 
   aerialImg = document.createElement("img");
-  // HTML からの相対パスで指定
   aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true"; 
   aerialImg.alt = "Parking Background";
   aerialImg.style.position = "absolute";
   aerialImg.style.left = "50%";
   aerialImg.style.top = "50%";
-  aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
   aerialImg.style.pointerEvents = "none";
   aerialImg.style.zIndex = 0;
-  aerialImg.style.display = "block"; // ← 非表示にならないように
-  aerialImg.style.maxWidth = "none";  // 自動縮小を無効化
+  aerialImg.style.display = "block";
+  aerialImg.style.maxWidth = "none";
   aerialImg.style.maxHeight = "none";
 
-  // 駐車場のサイズに合わせる
   const scale = Math.min(
     container.clientWidth / parking.width,
     container.clientHeight / parking.height
   );
   aerialImg.style.width  = parking.width * scale + "px";
   aerialImg.style.height = parking.height * scale + "px";
+  aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
 
-  // lot 内に追加
   lot.prepend(aerialImg);
-
-  // lot の position を relative にして、子要素の絶対配置を有効にする
   lot.style.position = "relative";
 }
 
 // ===== 描画 =====
 function render() {
+  // 既存要素削除
   lot.querySelectorAll(".rod,.node,.parking-area").forEach(e=>e.remove());
 
   const scale = Math.min(
@@ -94,7 +89,7 @@ function render() {
 
   lot.appendChild(area);
 
-  // ===== ロッド =====
+  // ===== ロッド描画 =====
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0?"empty":"full");
@@ -111,6 +106,7 @@ function render() {
     };
     update();
 
+    // ドラッグ
     d.onmousedown = e=>{
       e.preventDefault();
       const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
@@ -127,11 +123,52 @@ function render() {
       document.addEventListener("mouseup",up);
     };
 
+    // 右クリック回転
     d.oncontextmenu = e=>{
       e.preventDefault();
       r.angle = (r.angle + 90) % 360;
       update();
     };
+  });
+
+  // ===== ノード描画 =====
+  nodes.forEach(n=>{
+    const d = document.createElement("div");
+    d.className = "node";
+    d.textContent = n.id;
+    d.style.position = "absolute";
+    d.style.zIndex = 3;
+    d.style.background = "blue";
+    d.style.borderRadius = "50%";
+    d.style.pointerEvents = "auto";
+
+    const update = ()=>{
+      const size = n.radius * 2 * scale;
+      d.style.left = (n.x * scale - size/2) + "px";
+      d.style.top  = (n.y * scale - size/2) + "px";
+      d.style.width  = size + "px";
+      d.style.height = size + "px";
+    };
+    update();
+
+    // ドラッグ
+    d.onmousedown = e=>{
+      e.preventDefault();
+      const sx=e.clientX, sy=e.clientY, ox=n.x, oy=n.y;
+      const move = ev=>{
+        n.x = ox + (ev.clientX - sx) / scale;
+        n.y = oy + (ev.clientY - sy) / scale;
+        update();
+      };
+      const up = ()=>{
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    };
+
+    lot.appendChild(d);
   });
 }
 
@@ -146,6 +183,7 @@ document.getElementById("set-parking").onclick = ()=>{
   render();
 };
 
+// ロッド追加
 document.getElementById("add-rod").onclick = ()=>{
   rods.push({
     id:"R"+(rods.length+1),
@@ -159,7 +197,18 @@ document.getElementById("add-rod").onclick = ()=>{
   render();
 };
 
-// ===== ズーム =====
+// ノード追加
+document.getElementById("add-node").onclick = ()=>{
+  nodes.push({
+    id:"N"+(nodes.length+1),
+    x:parking.width/2,
+    y:parking.height/2,
+    radius:1.0
+  });
+  render();
+};
+
+// ズーム
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);
   if(aerialImg){
