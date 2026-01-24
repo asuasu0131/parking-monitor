@@ -16,6 +16,9 @@ let parking = { lat1:35.0, lng1:135.0, lat2:34.999, lng2:135.002, width:0, heigh
 let rods = [];
 let nodes = []; // 通路ノード
 
+// ===== 選択中ノード（接続用） =====
+let selectedNode = null;
+
 // ===== 緯度経度 → m換算 =====
 function calcParkingSize() {
   const latDist = (parking.lat1 - parking.lat2) * 111320;
@@ -26,9 +29,8 @@ function calcParkingSize() {
 
 // ===== 描画 =====
 function render() {
-  // 既存描画削除
+  // 前回描画を削除
   document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
-
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
 
   // lot は敷地内サイズに合わせる
@@ -48,7 +50,7 @@ function render() {
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
 
-  // グリッドを敷地内に表示
+  // グリッド
   const gridPx = GRID_M * scale;
   parkingArea.style.backgroundImage = `
     linear-gradient(to right, #aaa 1px, transparent 1px),
@@ -74,116 +76,130 @@ function render() {
     };
     updatePos();
 
-    // ===== ロッド移動 =====
+    // ドラッグ移動
     d.onmousedown = e=>{
       if(e.button!==0) return;
       e.preventDefault();
-      const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
-      function move(ev){ 
-        r.x = ox + (ev.clientX - sx)/scale;
-        r.y = oy + (ev.clientY - sy)/scale;
-        updatePos(); 
-      }
-      function up(){ 
-        document.removeEventListener("mousemove", move); 
-        document.removeEventListener("mouseup", up); 
-      }
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
+      const sx=e.clientX,sy=e.clientY,ox=r.x,oy=r.y;
+      function move(ev){ r.x=ox+(ev.clientX-sx)/scale; r.y=oy+(ev.clientY-sy)/scale; updatePos(); }
+      function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
+      document.addEventListener("mousemove",move);
+      document.addEventListener("mouseup",up);
     };
 
     // 右クリックで回転
-    d.oncontextmenu = e=>{ 
-      e.preventDefault(); 
-      r.angle = (r.angle + 90) % 360; 
-      updatePos(); 
+    d.oncontextmenu = e=>{
+      e.preventDefault();
+      r.angle=(r.angle+90)%360;
+      updatePos();
     };
   });
 
-  // ===== 通路ノード描画 =====
+  // ===== 通路ノード線描画 =====
   nodes.forEach(n=>{
-    const d = document.createElement("div");
-    d.className = "node";
-    d.style.left = n.x*scale -4 + "px";
-    d.style.top  = n.y*scale -4 + "px";
-    lot.appendChild(d);
-
-    // ノード線描画
     n.neighbors.forEach(id=>{
       const neighbor = nodes.find(x=>x.id===id);
       if(!neighbor) return;
       const line = document.createElement("div");
       line.className = "node-line";
-      const x1=n.x*scale, y1=n.y*scale, x2=neighbor.x*scale, y2=neighbor.y*scale;
-      const length = Math.hypot(x2-x1, y2-y1);
-      line.style.position="absolute";
-      line.style.left = x1+"px"; 
-      line.style.top = y1+"px";
-      line.style.width = length+"px"; 
+      const x1 = n.x*scale, y1 = n.y*scale;
+      const x2 = neighbor.x*scale, y2 = neighbor.y*scale;
+      const length = Math.hypot(x2-x1,y2-y1);
+      line.style.position = "absolute";
+      line.style.left = x1+"px";
+      line.style.top  = y1+"px";
+      line.style.width = length+"px";
       line.style.height = "2px";
       line.style.background = "#555";
-      line.style.transform = `rotate(${Math.atan2(y2-y1, x2-x1)}rad)`;
+      line.style.transform = `rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
       line.style.transformOrigin = "0 0";
       line.style.zIndex = 0;
       lot.appendChild(line);
     });
   });
+
+  // ===== ノード描画 =====
+  nodes.forEach(n=>{
+    const d = document.createElement("div");
+    d.className = "node";
+    d.style.left = n.x*scale -4 + "px";
+    d.style.top  = n.y*scale -4 + "px";
+    d.style.zIndex = 1;
+    lot.appendChild(d);
+
+    if(selectedNode && selectedNode.id === n.id){
+      d.style.border = "2px dashed blue";
+    }
+  });
 }
 
 // ===== イベント =====
+
+// 駐車場サイズ設定
 document.getElementById("set-parking").onclick = ()=>{
-  parking.lat1 = parseFloat(lat1.value);
-  parking.lng1 = parseFloat(lng1.value);
-  parking.lat2 = parseFloat(lat2.value);
-  parking.lng2 = parseFloat(lng2.value);
+  parking.lat1=parseFloat(lat1.value);
+  parking.lng1=parseFloat(lng1.value);
+  parking.lat2=parseFloat(lat2.value);
+  parking.lng2=parseFloat(lng2.value);
   calcParkingSize();
   render();
 };
 
+// ロッド追加
 document.getElementById("add-rod").onclick = ()=>{
   rods.push({id:"R"+(rods.length+1),x:parking.width/4,y:parking.height/4,width:ROD_WIDTH_M,height:ROD_HEIGHT_M,status:0,angle:0});
   render();
 };
 
-// ===== 通路ノード追加（ロッドクリックでは追加しない） =====
+// ノード追加・接続
 lot.onclick = e=>{
-  if(e.target.classList.contains("rod")) return; // ロッドクリックは無視
-
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
   const rect = lot.getBoundingClientRect();
-  const x = (e.clientX - rect.left)/scale;
-  const y = (e.clientY - rect.top)/scale;
-  const newNode = { id:"N"+(nodes.length+1), x, y, neighbors:[] };
+  const x = (e.clientX-rect.left)/scale;
+  const y = (e.clientY-rect.top)/scale;
 
-  // 最近傍ノードに自動で接続
-  if(nodes.length > 0){
-    const lastNode = nodes[nodes.length-1];
-    lastNode.neighbors.push(newNode.id);
-    newNode.neighbors.push(lastNode.id);
+  // ロッドクリックは無視
+  const rodClicked = rods.some(r=>{
+    const rx=r.x, ry=r.y, rw=r.width, rh=r.height;
+    return x>=rx && x<=rx+rw && y>=ry && y<=ry+rh;
+  });
+  if(rodClicked) return;
+
+  // 既存ノードをクリックした場合 → 接続モード
+  const clickedNode = nodes.find(n=>Math.hypot(n.x-x,n.y-y)<10);
+  if(clickedNode){
+    if(selectedNode && selectedNode!==clickedNode){
+      // 接続
+      if(!selectedNode.neighbors.includes(clickedNode.id)) selectedNode.neighbors.push(clickedNode.id);
+      if(!clickedNode.neighbors.includes(selectedNode.id)) clickedNode.neighbors.push(selectedNode.id);
+      selectedNode = null;
+      render();
+    } else {
+      selectedNode = clickedNode;
+      render();
+    }
+    return;
   }
+
+  // 新規ノード追加
+  const newNode = { id:"N"+(nodes.length+1), x, y, neighbors:[] };
   nodes.push(newNode);
+  selectedNode = newNode; // 追加したノードを選択状態に
   render();
 };
 
-// ===== レイアウト保存 =====
+// レイアウト保存
 document.getElementById("save-layout").onclick = async ()=>{
   const data = { parking, rods, nodes };
-  await fetch("/save_layout",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(data)
-  });
+  await fetch("/save_layout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
   alert("保存しました");
 };
 
-// ===== ズーム =====
+// ズーム
 zoomSlider.oninput = ()=>{ zoomScale = parseFloat(zoomSlider.value); };
 
 // ===== ズームループ =====
-(function loop(){
-  lot.style.transform = `scale(${zoomScale})`;
-  requestAnimationFrame(loop);
-})();
+(function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
 
 // 初期化
 calcParkingSize();
