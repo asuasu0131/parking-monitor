@@ -26,15 +26,17 @@ function calcParkingSize() {
 
 // ===== 描画 =====
 function render() {
+  // 既存描画削除
   document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
+
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
 
-  // lot サイズ更新
-  lot.style.width  = parking.width * scale + "px";
+  // lot は敷地内サイズに合わせる
+  lot.style.width  = parking.width  * scale + "px";
   lot.style.height = parking.height * scale + "px";
   lot.style.background = "transparent";
 
-  // ===== 敷地内表示（薄い灰色 + グリッド） =====
+  // ===== 敷地内（薄い灰色 + グリッド） =====
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -46,7 +48,7 @@ function render() {
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
 
-  // グリッド描画
+  // グリッドを敷地内に表示
   const gridPx = GRID_M * scale;
   parkingArea.style.backgroundImage = `
     linear-gradient(to right, #aaa 1px, transparent 1px),
@@ -54,7 +56,6 @@ function render() {
   `;
   parkingArea.style.backgroundSize = `${gridPx}px ${gridPx}px`;
 
-  // lot に追加
   lot.appendChild(parkingArea);
 
   // ===== ロッド描画 =====
@@ -63,6 +64,7 @@ function render() {
     d.className = "rod " + (r.status===0?"empty":"full");
     d.textContent = r.id;
     lot.appendChild(d);
+
     const updatePos = ()=>{
       d.style.left   = r.x * scale + "px";
       d.style.top    = r.y * scale + "px";
@@ -71,16 +73,31 @@ function render() {
       d.style.transform = `rotate(${r.angle}deg)`;
     };
     updatePos();
+
+    // ===== ロッド移動 =====
     d.onmousedown = e=>{
       if(e.button!==0) return;
       e.preventDefault();
-      const sx=e.clientX,sy=e.clientY,ox=r.x,oy=r.y;
-      function move(ev){ r.x=ox+(ev.clientX-sx)/scale; r.y=oy+(ev.clientY-sy)/scale; updatePos(); }
-      function up(){ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); }
-      document.addEventListener("mousemove",move);
-      document.addEventListener("mouseup",up);
+      const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
+      function move(ev){ 
+        r.x = ox + (ev.clientX - sx)/scale;
+        r.y = oy + (ev.clientY - sy)/scale;
+        updatePos(); 
+      }
+      function up(){ 
+        document.removeEventListener("mousemove", move); 
+        document.removeEventListener("mouseup", up); 
+      }
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
     };
-    d.oncontextmenu = e=>{ e.preventDefault(); r.angle=(r.angle+90)%360; updatePos(); };
+
+    // 右クリックで回転
+    d.oncontextmenu = e=>{ 
+      e.preventDefault(); 
+      r.angle = (r.angle + 90) % 360; 
+      updatePos(); 
+    };
   });
 
   // ===== 通路ノード描画 =====
@@ -98,14 +115,16 @@ function render() {
       const line = document.createElement("div");
       line.className = "node-line";
       const x1=n.x*scale, y1=n.y*scale, x2=neighbor.x*scale, y2=neighbor.y*scale;
-      const length = Math.hypot(x2-x1,y2-y1);
+      const length = Math.hypot(x2-x1, y2-y1);
       line.style.position="absolute";
-      line.style.left=x1+"px"; line.style.top=y1+"px";
-      line.style.width=length+"px"; line.style.height="2px";
-      line.style.background="#555";
-      line.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
-      line.style.transformOrigin="0 0";
-      line.style.zIndex=0;
+      line.style.left = x1+"px"; 
+      line.style.top = y1+"px";
+      line.style.width = length+"px"; 
+      line.style.height = "2px";
+      line.style.background = "#555";
+      line.style.transform = `rotate(${Math.atan2(y2-y1, x2-x1)}rad)`;
+      line.style.transformOrigin = "0 0";
+      line.style.zIndex = 0;
       lot.appendChild(line);
     });
   });
@@ -113,10 +132,10 @@ function render() {
 
 // ===== イベント =====
 document.getElementById("set-parking").onclick = ()=>{
-  parking.lat1=parseFloat(lat1.value);
-  parking.lng1=parseFloat(lng1.value);
-  parking.lat2=parseFloat(lat2.value);
-  parking.lng2=parseFloat(lng2.value);
+  parking.lat1 = parseFloat(lat1.value);
+  parking.lng1 = parseFloat(lng1.value);
+  parking.lat2 = parseFloat(lat2.value);
+  parking.lng2 = parseFloat(lng2.value);
   calcParkingSize();
   render();
 };
@@ -126,15 +145,18 @@ document.getElementById("add-rod").onclick = ()=>{
   render();
 };
 
-// ===== 通路ノード追加 =====
+// ===== 通路ノード追加（ロッドクリックでは追加しない） =====
 lot.onclick = e=>{
+  if(e.target.classList.contains("rod")) return; // ロッドクリックは無視
+
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
   const rect = lot.getBoundingClientRect();
-  const x = (e.clientX-rect.left)/scale;
-  const y = (e.clientY-rect.top)/scale;
+  const x = (e.clientX - rect.left)/scale;
+  const y = (e.clientY - rect.top)/scale;
   const newNode = { id:"N"+(nodes.length+1), x, y, neighbors:[] };
 
-  if(nodes.length>0){
+  // 最近傍ノードに自動で接続
+  if(nodes.length > 0){
     const lastNode = nodes[nodes.length-1];
     lastNode.neighbors.push(newNode.id);
     newNode.neighbors.push(lastNode.id);
@@ -143,16 +165,25 @@ lot.onclick = e=>{
   render();
 };
 
+// ===== レイアウト保存 =====
 document.getElementById("save-layout").onclick = async ()=>{
   const data = { parking, rods, nodes };
-  await fetch("/save_layout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  await fetch("/save_layout",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
   alert("保存しました");
 };
 
+// ===== ズーム =====
 zoomSlider.oninput = ()=>{ zoomScale = parseFloat(zoomSlider.value); };
 
 // ===== ズームループ =====
-(function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
+(function loop(){
+  lot.style.transform = `scale(${zoomScale})`;
+  requestAnimationFrame(loop);
+})();
 
 // 初期化
 calcParkingSize();
