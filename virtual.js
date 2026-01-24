@@ -70,7 +70,9 @@ function findPath(startPos, targetPos){
 
 // ===== 描画 =====
 function renderAll(){
-  document.querySelectorAll(".rod,.node,.node-line,.user-marker,.path-line").forEach(e=>e.remove());
+  // 前回の描画を全削除（ユーザマーカーも含む）
+  document.querySelectorAll(".rod,.user-marker,.path-line").forEach(e=>e.remove());
+
   const scale=Math.min(container.clientWidth/parking.width,container.clientHeight/parking.height);
   lot.style.width = parking.width*scale+"px";
   lot.style.height = parking.height*scale+"px";
@@ -104,28 +106,7 @@ function renderAll(){
     lot.appendChild(d);
   });
 
-  // 通路ノード線
-  nodes.forEach(n=>{
-    n.neighbors.forEach(id=>{
-      const neighbor=nodes.find(x=>x.id===id);
-      if(!neighbor) return;
-      const line=document.createElement("div");
-      line.className="path-line";
-      const x1=n.x*scale,y1=n.y*scale,x2=neighbor.x*scale,y2=neighbor.y*scale;
-      const length=Math.hypot(x2-x1,y2-y1);
-      line.style.position="absolute";
-      line.style.left=x1+"px"; line.style.top=y1+"px";
-      line.style.width=length+"px";
-      line.style.height="2px";
-      line.style.background="#555";
-      line.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
-      line.style.transformOrigin="0 0";
-      line.style.zIndex=0;
-      lot.appendChild(line);
-    });
-  });
-
-  // ユーザマーカー
+  // ===== ユーザマーカー =====
   const userMarker=document.createElement("div");
   userMarker.id="user-marker";
   userMarker.style.left=user.x*scale+"px";
@@ -162,7 +143,7 @@ function renderAll(){
       line.style.position="absolute";
       line.style.left=x1+"px"; line.style.top=y1+"px";
       line.style.width=length+"px"; line.style.height="3px";
-      line.style.background="#2196f3";
+      line.style.background="#2196f3"; // 青い案内線のみ
       line.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
       line.style.transformOrigin="0 0";
       line.style.zIndex=2;
