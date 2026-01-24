@@ -29,12 +29,12 @@ function render() {
   document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
 
-  // lot は敷地内サイズに合わせる
-  lot.style.width  = parking.width  * scale + "px";
+  // lot サイズ更新
+  lot.style.width  = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
   lot.style.background = "transparent";
 
-  // ===== 敷地内（薄い灰色 + グリッド） =====
+  // ===== 敷地内表示（薄い灰色 + グリッド） =====
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -46,7 +46,7 @@ function render() {
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
 
-  // グリッドを敷地内に表示
+  // グリッド描画
   const gridPx = GRID_M * scale;
   parkingArea.style.backgroundImage = `
     linear-gradient(to right, #aaa 1px, transparent 1px),
@@ -54,6 +54,7 @@ function render() {
   `;
   parkingArea.style.backgroundSize = `${gridPx}px ${gridPx}px`;
 
+  // lot に追加
   lot.appendChild(parkingArea);
 
   // ===== ロッド描画 =====
@@ -133,7 +134,6 @@ lot.onclick = e=>{
   const y = (e.clientY-rect.top)/scale;
   const newNode = { id:"N"+(nodes.length+1), x, y, neighbors:[] };
 
-  // 最近傍ノードに自動で接続
   if(nodes.length>0){
     const lastNode = nodes[nodes.length-1];
     lastNode.neighbors.push(newNode.id);
