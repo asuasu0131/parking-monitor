@@ -38,9 +38,9 @@ function getTileUrl(x, y, z) {
 }
 
 // ===== 背景設定 =====
-function setAerialBackground() {
+function setAerialBackground(zoomLevel) {
   if (!parking.lat1 || !parking.lat2) return;
-  const zoom = 19; // 詳細レベル
+  const zoom = zoomLevel || 19; // デフォルト19
   const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
   const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
 
@@ -50,8 +50,7 @@ function setAerialBackground() {
   const minTileY = Math.floor(topLeft.y / tileSize);
   const maxTileY = Math.floor(bottomRight.y / tileSize);
 
-  // まず container 内を空に
-  container.innerHTML = '';
+  container.innerHTML = ''; // 古いタイルを消す
 
   for (let x = minTileX; x <= maxTileX; x++) {
     for (let y = minTileY; y <= maxTileY; y++) {
@@ -223,7 +222,13 @@ document.getElementById("save-layout").onclick = async ()=>{
   alert("保存しました");
 };
 
-zoomSlider.oninput = ()=>{ zoomScale = parseFloat(zoomSlider.value); };
+zoomSlider.oninput = () => {
+  zoomScale = parseFloat(zoomSlider.value);
+  // 背景画像のズームも反映
+  // スライダー値に合わせて 18〜20 レベルなどに調整
+  const zoomLevel = Math.round(18 + (zoomScale - 0.5) * 4); // 例: 0.5→18, 1→20
+  setAerialBackground(zoomLevel);
+};
 
 (function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
 
