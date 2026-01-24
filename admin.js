@@ -182,26 +182,45 @@ function render() {
 
   });
 
-  // ---- 線（リンク） ----
-  links.forEach(link=>{
-    const n1 = nodes.find(x=>x.id===link.from);
-    const n2 = nodes.find(x=>x.id===link.to);
-    if (!n1 || !n2) return;
-    const line = document.createElement("div");
-    line.className = "link-line";
-    const x1=n1.x*scale, y1=n1.y*scale, x2=n2.x*scale, y2=n2.y*scale;
-    const length = Math.hypot(x2-x1,y2-y1);
-    Object.assign(line.style, {
-      position:"absolute",
-      left:x1+"px", top:y1+"px",
-      width:length+"px", height:"3px",
-      background:"#0000ff",
-      transform:`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`,
-      transformOrigin:"0 0",
-      zIndex:2
-    });
-    lot.appendChild(line);
+// ---- 線（リンク） ----
+links.forEach((link, index) => {
+  const n1 = nodes.find(x => x.id === link.from);
+  const n2 = nodes.find(x => x.id === link.to);
+  if (!n1 || !n2) return;
+
+  const line = document.createElement("div");
+  line.className = "link-line";
+
+  const x1 = n1.x * scale, y1 = n1.y * scale;
+  const x2 = n2.x * scale, y2 = n2.y * scale;
+  const length = Math.hypot(x2 - x1, y2 - y1);
+
+  Object.assign(line.style, {
+    position: "absolute",
+    left: x1 + "px",
+    top: y1 + "px",
+    width: length + "px",
+    height: "3px",
+    background: "#0000ff",
+    transform: `rotate(${Math.atan2(y2 - y1, x2 - x1)}rad)`,
+    transformOrigin: "0 0",
+    zIndex: 2,
+    cursor: "pointer"
   });
+
+  // ---- 線削除イベント ----
+  line.onclick = e => {
+    if (e.ctrlKey) { // Ctrlキーを押しながらクリックで削除
+      links.splice(index, 1);
+      // 双方向 neighbors も削除
+      n1.neighbors = n1.neighbors.filter(id => id !== n2.id);
+      n2.neighbors = n2.neighbors.filter(id => id !== n1.id);
+      render();
+    }
+  };
+
+  lot.appendChild(line);
+});
 }
 
 // ===== イベント =====
