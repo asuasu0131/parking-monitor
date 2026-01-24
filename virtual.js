@@ -10,6 +10,7 @@ const userSpeed = 1;
 
 const socket = io();
 let userMarker = null;
+let aerialImg = null;
 
 // ===== 座標変換・背景設定 =====
 function latLngToPixel(lat, lng, zoom) {
@@ -25,15 +26,29 @@ function getTileUrl(x, y, z) {
 
 function setAerialBackground(container, parking) {
   if (!parking.lat1 || !parking.lat2 || !parking.lng1 || !parking.lng2) return;
-  const zoom = 19;
-  const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
-  const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
-  const widthPx = Math.abs(bottomRight.x - topLeft.x);
-  const heightPx = Math.abs(bottomRight.y - topLeft.y);
-  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x / 256), Math.floor(topLeft.y / 256), zoom)})`;
-  container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
-  container.style.backgroundPosition = `0px 0px`;
-  container.style.backgroundRepeat = "no-repeat";
+
+  aerialImg = document.createElement("img");
+  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true"; // 管理者画面と同じ
+  aerialImg.alt = "Parking Background";
+  Object.assign(aerialImg.style, {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    pointerEvents: "none",
+    zIndex: 0,
+    display: "block",
+    maxWidth: "none",
+    maxHeight: "none",
+    transform: `translate(-50%,-50%) scale(${zoomScale})`
+  });
+
+  // 表示サイズ調整
+  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
+  aerialImg.style.width  = parking.width * scale + "px";
+  aerialImg.style.height = parking.height * scale + "px";
+
+  lot.prepend(aerialImg);
+  lot.style.position = "relative";
 }
 
 // layout_updated イベント受信で再ロード
@@ -281,7 +296,11 @@ document.addEventListener("keydown", e => {
 });
 
 // ===== ズーム =====
-zoomSlider.addEventListener("input", () => { zoomScale = parseFloat(zoomSlider.value); });
+zoomSlider.addEventListener("input", () => {
+  zoomScale = parseFloat(zoomSlider.value);
+  if (aerialImg) aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
+  lot.style.transform = `scale(${zoomScale})`;
+});
 
 // 初期化
 loadLayout();
