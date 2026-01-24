@@ -36,7 +36,7 @@ function updateGrid(scale) {
 
 // ===== 描画 =====
 function render() {
-  document.querySelectorAll(".rod,.node,.node-line").forEach(e=>e.remove());
+  document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
   const scale = Math.min(container.clientWidth/parking.width, container.clientHeight/parking.height);
 
   lot.style.width  = parking.width  * scale + "px";
@@ -52,7 +52,7 @@ function render() {
   parkingArea.style.top  = "0px";
   parkingArea.style.width  = parking.width * scale + "px";
   parkingArea.style.height = parking.height * scale + "px";
-  parkingArea.style.background = "#bfbfbf";
+  parkingArea.style.background = "#bfbfbf"; // 薄い灰色
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
   lot.appendChild(parkingArea);
