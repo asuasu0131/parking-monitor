@@ -14,8 +14,15 @@ const socket = io();
 async function loadLayout(){
   const res = await fetch("/parking_layout.json");
   const data = await res.json();
-  if(data.parking && data.rods && data.nodes){ parking=data.parking; rods=data.rods; nodes=data.nodes; }
-  else { rods=data; parking={width:200,height:100}; nodes=[]; }
+  if(data.parking && data.rods && data.nodes){
+    parking = data.parking;
+    rods = data.rods;
+    nodes = data.nodes;
+  } else {
+    rods = data; 
+    parking = {width:200,height:100};
+    nodes = [];
+  }
   renderAll();
 }
 
@@ -23,21 +30,24 @@ async function loadLayout(){
 function findPath(startPos, targetPos){
   if(nodes.length===0) return [];
 
-  // 最寄りノード
-  function nearestNode(pos){ return nodes.reduce((a,b)=>Math.hypot(a.x-pos.x,a.y-pos.y)<Math.hypot(b.x-pos.x,b.y-pos.y)?a:b); }
-  const startNode=nearestNode(startPos), endNode=nearestNode(targetPos);
+  function nearestNode(pos){
+    return nodes.reduce((a,b)=>Math.hypot(a.x-pos.x,a.y-pos.y)<Math.hypot(b.x-pos.x,b.y-pos.y)?a:b);
+  }
+
+  const startNode = nearestNode(startPos);
+  const endNode = nearestNode(targetPos);
 
   const open=[], closed=new Set(), cameFrom={};
   const gScore={}, fScore={};
   nodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
-  gScore[startNode.id]=0; fScore[startNode.id]=Math.hypot(startNode.x-endNode.x,startNode.y-endNode.y);
+  gScore[startNode.id]=0;
+  fScore[startNode.id]=Math.hypot(startNode.x-endNode.x,startNode.y-endNode.y);
   open.push(startNode);
 
   while(open.length>0){
     open.sort((a,b)=>fScore[a.id]-fScore[b.id]);
-    const current=open.shift();
+    const current = open.shift();
     if(current.id===endNode.id){
-      // 経路復元
       const path=[current];
       while(cameFrom[path[0].id]) path.unshift(cameFrom[path[0].id]);
       return path;
@@ -45,12 +55,12 @@ function findPath(startPos, targetPos){
     closed.add(current.id);
     current.neighbors.forEach(nid=>{
       if(closed.has(nid)) return;
-      const neighbor=nodes.find(x=>x.id===nid);
-      const tentativeG=gScore[current.id]+Math.hypot(current.x-neighbor.x,current.y-neighbor.y);
+      const neighbor = nodes.find(x=>x.id===nid);
+      const tentativeG = gScore[current.id] + Math.hypot(current.x-neighbor.x,current.y-neighbor.y);
       if(tentativeG<gScore[neighbor.id]){
         cameFrom[neighbor.id]=current;
         gScore[neighbor.id]=tentativeG;
-        fScore[neighbor.id]=tentativeG+Math.hypot(neighbor.x-endNode.x,neighbor.y-endNode.y);
+        fScore[neighbor.id]=tentativeG + Math.hypot(neighbor.x-endNode.x, neighbor.y-endNode.y);
         if(!open.includes(neighbor)) open.push(neighbor);
       }
     });
@@ -62,8 +72,8 @@ function findPath(startPos, targetPos){
 function renderAll(){
   document.querySelectorAll(".rod,.node,.node-line,.user-marker,.path-line").forEach(e=>e.remove());
   const scale=Math.min(container.clientWidth/parking.width,container.clientHeight/parking.height);
-  lot.style.width=parking.width*scale+"px";
-  lot.style.height=parking.height*scale+"px";
+  lot.style.width = parking.width*scale+"px";
+  lot.style.height = parking.height*scale+"px";
 
   // container背景（敷地外色）
   container.style.background="#888";
@@ -81,7 +91,7 @@ function renderAll(){
   parkingArea.style.zIndex=0;
   lot.appendChild(parkingArea);
 
-  // ロッド
+  // ロッド描画
   rods.forEach(r=>{
     const d=document.createElement("div");
     d.className="rod "+(r.status===0?"empty":"full");
@@ -105,7 +115,8 @@ function renderAll(){
       const length=Math.hypot(x2-x1,y2-y1);
       line.style.position="absolute";
       line.style.left=x1+"px"; line.style.top=y1+"px";
-      line.style.width=length+"px"; line.style.height="2px";
+      line.style.width=length+"px";
+      line.style.height="2px";
       line.style.background="#555";
       line.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
       line.style.transformOrigin="0 0";
@@ -121,10 +132,10 @@ function renderAll(){
   userMarker.style.top=user.y*scale+"px";
   lot.appendChild(userMarker);
 
-  // 最短経路（空ロッドまで）
-  const targetRod=rods.find(r=>r.status===0);
+  // 最短経路（空きロッドまで）
+  const targetRod = rods.find(r=>r.status===0);
   if(targetRod){
-    const path=findPath(user,{x:targetRod.x,y:targetRod.y});
+    const path = findPath(user, {x:targetRod.x, y:targetRod.y});
     for(let i=0;i<path.length-1;i++){
       const line=document.createElement("div");
       line.className="path-line";
@@ -154,8 +165,11 @@ document.addEventListener("keydown",e=>{
   renderAll();
 });
 
+// ズーム
 zoomSlider.addEventListener("input",()=>{ zoomScale=parseFloat(zoomSlider.value); });
+
+// 初期化
 loadLayout();
 
-// ズームループ
+// ===== ズームループ =====
 (function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
