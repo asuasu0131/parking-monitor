@@ -36,7 +36,7 @@ function setAerialBackground() {
 
   aerialImg = document.createElement("img");
   // HTML からの相対パスで指定
-  aerialImg.src = "./parking_bg.png"; 
+  aerialImg.src = "parking_bg.png"; 
   aerialImg.alt = "Parking Background";
   aerialImg.style.position = "absolute";
   aerialImg.style.left = "50%";
