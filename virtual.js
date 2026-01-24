@@ -11,6 +11,29 @@ const userSpeed = 1;
 const socket = io();
 let userMarker = null;
 
+// 既存コードの先頭に追加
+function latLngToPixel(lat, lng, zoom) {
+  const sinLat = Math.sin(lat * Math.PI / 180);
+  const x = ((lng + 180) / 360) * 256 * Math.pow(2, zoom);
+  const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * 256 * Math.pow(2, zoom);
+  return { x, y };
+}
+function getTileUrl(x, y, z) {
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+}
+function setAerialBackground(container, parking) {
+  if(!parking.lat1 || !parking.lat2) return;
+  const zoom = 19;
+  const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
+  const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
+  const widthPx = Math.abs(bottomRight.x - topLeft.x);
+  const heightPx = Math.abs(bottomRight.y - topLeft.y);
+  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x/256), Math.floor(topLeft.y/256), zoom)})`;
+  container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
+  container.style.backgroundPosition = `0px 0px`;
+  container.style.backgroundRepeat = "no-repeat";
+}
+
 // 仮想ノード生成（線だけの経路も分割）
 function generateVirtualNodes(allNodes, step = 5) {
   const virtualNodes = [];
@@ -55,12 +78,7 @@ async function loadLayout() {
     parking = data.parking;
     rods = data.rods;
     nodes = data.nodes;
-  } else {
-    rods = data;
-    parking = { width: 200, height: 100 };
-    nodes = [];
   }
-
   if (!userMarker) {
     userMarker = document.createElement("div");
     userMarker.id = "user-marker";
@@ -73,7 +91,7 @@ async function loadLayout() {
     userMarker.style.zIndex = 1001;
     lot.appendChild(userMarker);
   }
-
+  setAerialBackground(container, parking); // ← ここで背景設定
   renderAll();
 }
 
