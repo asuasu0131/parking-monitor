@@ -5,34 +5,73 @@ button { padding:6px 10px; margin:2px; font-size:14px; }
 #zoom-slider { width:200px; }
 
 #parking-lot-container {
-  position:relative;
-  width:100%; height:600px;
-  overflow:scroll; border:1px solid #888; background:#bfbfbf;
-  cursor:grab;
+  position: relative;
+  width: 100%;
+  height: 600px;
+  overflow: auto;
+  border: 1px solid #888;
+  background: #bfbfbf;
+  cursor: grab;
 }
-#parking-lot {
-  position:relative;
-  width:2000px;  /* 200mをpx換算 */
-  height:1000px; /* 100mをpx換算 */
-  background:#ddd;
-  transform-origin:top left;
 
-    cursor: crosshair;
+#parking-lot {
+  position: relative;
+  background: transparent;
+  transform-origin: top left;
 }
+
+/* 背景画像 */
+#parking-lot img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+  display: block;
+  max-width: none;
+  max-height: none;
+}
+
+/* 敷地グリッド */
+.parking-area {
+  position: absolute;
+  border: 2px solid #000;
+  background: transparent;
+  z-index: 1;
+}
+
+/* ロッド */
 .rod {
-  position:absolute;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:white;
-  font-weight:bold;
-  border:1px solid white;
-  cursor:move;
-  user-select:none;
-  transform-origin:center center;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  border: 1px solid white;
+  cursor: move;
+  user-select: none;
+  transform-origin: center center;
 }
-.empty { background:#4caf50; }
-.full  { background:#f44336; }
+.empty { background: #4caf50; }
+.full  { background: #f44336; }
+
+/* ノード */
+.node {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: blue;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 20px;
+  font-size: 10px;
+  color: white;
+  cursor: pointer;
+  z-index: 3;
+  user-select: none;
+}
 
 .resize-handle {
   width:10px; height:10px;
