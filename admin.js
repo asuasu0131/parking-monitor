@@ -9,7 +9,7 @@ let zoomScale = 1;
 // ===== 現実サイズ =====
 const ROD_WIDTH_M  = 2.5;
 const ROD_HEIGHT_M = 5.0;
-const GRID_M = 5;
+const GRID_M = 5;  // グリッド1マスの大きさ（m）
 
 // ===== 駐車場情報 =====
 let parking = {
@@ -20,6 +20,8 @@ let parking = {
 };
 
 let rods = [];
+let grid = []; // 0:通れない, 1:通路
+const GRID_CELL_M = 5; // 1セル = 5m
 
 // ===== 緯度経度 → m換算 =====
 function calcParkingSize() {
@@ -31,6 +33,14 @@ function calcParkingSize() {
 
   parking.width  = Math.abs(lngDist);
   parking.height = Math.abs(latDist);
+  initGrid();
+}
+
+// ===== 通路グリッド初期化 =====
+function initGrid() {
+  const cols = Math.ceil(parking.width / GRID_CELL_M);
+  const rows = Math.ceil(parking.height / GRID_CELL_M);
+  grid = Array.from({length: rows}, ()=>Array(cols).fill(0));
 }
 
 // ===== グリッド描画 =====
@@ -43,19 +53,48 @@ function updateGrid(scale) {
   lot.style.backgroundSize = `${gridPx}px ${gridPx}px`;
 }
 
+// ===== 通路セル描画 =====
+function renderGrid() {
+  document.querySelectorAll(".grid-cell").forEach(e=>e.remove());
+  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
+  const rows = grid.length;
+  const cols = grid[0].length;
+
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const d = document.createElement("div");
+      d.className = "grid-cell";
+      d.style.position = "absolute";
+      d.style.left = x*GRID_CELL_M*scale + "px";
+      d.style.top  = y*GRID_CELL_M*scale + "px";
+      d.style.width  = GRID_CELL_M*scale + "px";
+      d.style.height = GRID_CELL_M*scale + "px";
+      d.style.background = grid[y][x]? "rgba(100,150,255,0.4)" : "transparent";
+      d.style.border = "1px solid rgba(0,0,0,0.1)";
+      d.dataset.x = x;
+      d.dataset.y = y;
+      lot.appendChild(d);
+
+      d.onclick = ()=>{
+        grid[y][x] = grid[y][x]?0:1; // トグル
+        renderGrid();
+      };
+    }
+  }
+}
+
 // ===== 描画 =====
 function render() {
-  document.querySelectorAll(".rod").forEach(e=>e.remove());
+  document.querySelectorAll(".rod, .grid-cell").forEach(e=>e.remove());
 
-  const scale = Math.min(
-    container.clientWidth  / parking.width,
-    container.clientHeight / parking.height
-  );
+  const scale = Math.min(container.clientWidth  / parking.width,
+                         container.clientHeight / parking.height);
 
   lot.style.width  = parking.width  * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
   updateGrid(scale);
+  renderGrid();
 
   rods.forEach(r=>{
     const d = document.createElement("div");
@@ -70,20 +109,16 @@ function render() {
       d.style.height = r.height * scale + "px";
       d.style.transform = `rotate(${r.angle}deg)`;
     }
-
     updatePos();
 
-    // 左ドラッグ移動
     d.onmousedown = e=>{
       if(e.button!==0) return;
       e.preventDefault();
-
       const sx = e.clientX, sy = e.clientY;
       const ox = r.x, oy = r.y;
-
       function move(ev){
-        r.x = ox + (ev.clientX - sx) / scale;
-        r.y = oy + (ev.clientY - sy) / scale;
+        r.x = ox + (ev.clientX - sx)/scale;
+        r.y = oy + (ev.clientY - sy)/scale;
         updatePos();
       }
       function up(){
@@ -94,7 +129,6 @@ function render() {
       document.addEventListener("mouseup", up);
     };
 
-    // 右クリック回転
     d.oncontextmenu = e=>{
       e.preventDefault();
       r.angle = (r.angle + 90) % 360;
@@ -127,27 +161,21 @@ document.getElementById("add-rod").onclick = ()=>{
   render();
 };
 
-document.getElementById("save-layout").onclick = async () => {
+document.getElementById("save-layout").onclick = async ()=>{
   const data = {
-    parking: {
-      width: parking.width,
-      height: parking.height
-    },
-    rods: rods
+    parking: parking,
+    rods: rods,
+    grid: grid
   };
-
-  const res = await fetch("/save_layout", {
+  await fetch("/save_layout",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify(data)
   });
-
-  if(res.ok) alert("保存しました");
+  alert("保存しました");
 };
 
-zoomSlider.oninput = ()=>{
-  zoomScale = parseFloat(zoomSlider.value);
-};
+zoomSlider.oninput = ()=>{ zoomScale = parseFloat(zoomSlider.value); };
 
 // ===== ズームループ =====
 (function loop(){
