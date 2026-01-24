@@ -10,9 +10,6 @@ const userSpeed = 1; // 1m/キー押下
 
 const socket = io();
 
-// ユーザマーカー要素をグローバルで保持
-let userMarker = null;
-
 // 管理者レイアウト取得
 async function loadLayout(){
   const res = await fetch("/parking_layout.json");
@@ -26,23 +23,15 @@ async function loadLayout(){
     parking = {width:200,height:100};
     nodes = [];
   }
-
-  // 初回ユーザマーカー作成
-  if(!userMarker){
-    userMarker = document.createElement("div");
-    userMarker.id = "user-marker";
-    lot.appendChild(userMarker);
-  }
-
   renderAll();
 }
 
 // ===== A*探索 =====
-function findPath(startPos, targetPos){
-  if(nodes.length===0) return [];
+function findPath(startPos, targetPos, allNodes){
+  if(allNodes.length===0) return [];
 
   function nearestNode(pos){
-    return nodes.reduce((a,b)=>Math.hypot(a.x-pos.x,a.y-pos.y)<Math.hypot(b.x-pos.x,b.y-pos.y)?a:b);
+    return allNodes.reduce((a,b)=>Math.hypot(a.x-pos.x,a.y-pos.y)<Math.hypot(b.x-pos.x,pos.y-b.y)?a:b);
   }
 
   const startNode = nearestNode(startPos);
@@ -50,7 +39,7 @@ function findPath(startPos, targetPos){
 
   const open=[], closed=new Set(), cameFrom={};
   const gScore={}, fScore={};
-  nodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
+  allNodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
   gScore[startNode.id]=0;
   fScore[startNode.id]=Math.hypot(startNode.x-endNode.x,startNode.y-endNode.y);
   open.push(startNode);
@@ -66,7 +55,8 @@ function findPath(startPos, targetPos){
     closed.add(current.id);
     current.neighbors.forEach(nid=>{
       if(closed.has(nid)) return;
-      const neighbor = nodes.find(x=>x.id===nid);
+      const neighbor = allNodes.find(x=>x.id===nid);
+      if(!neighbor) return;
       const tentativeG = gScore[current.id] + Math.hypot(current.x-neighbor.x,current.y-neighbor.y);
       if(tentativeG<gScore[neighbor.id]){
         cameFrom[neighbor.id]=current;
@@ -81,14 +71,14 @@ function findPath(startPos, targetPos){
 
 // ===== 描画 =====
 function renderAll(){
-  // ロッド・経路のみ削除（ユーザマーカーは消さない）
-  document.querySelectorAll(".rod,.path-line").forEach(e=>e.remove());
+  // 前回描画を削除（ユーザマーカーも含む）
+  document.querySelectorAll(".rod,.user-marker,.path-line").forEach(e=>e.remove());
 
   const scale=Math.min(container.clientWidth/parking.width,container.clientHeight/parking.height);
   lot.style.width = parking.width*scale+"px";
   lot.style.height = parking.height*scale+"px";
 
-  // container背景（敷地外色）
+  // container背景
   container.style.background="#888";
 
   // 敷地内
@@ -117,9 +107,46 @@ function renderAll(){
     lot.appendChild(d);
   });
 
-  // ===== ユーザマーカー位置更新 =====
-  userMarker.style.left = user.x*scale + "px";
-  userMarker.style.top  = user.y*scale + "px";
+  // 仮想ノード生成（線だけの場合）
+  const virtualNodes = [];
+  nodes.forEach(n=>{
+    if(n.neighbors.length===0) return;
+    n.neighbors.forEach(id=>{
+      const neighbor = nodes.find(x=>x.id===id);
+      if(!neighbor) return;
+      const dist = Math.hypot(neighbor.x-n.x, neighbor.y-n.y);
+      const steps = Math.ceil(dist/5); // 5m間隔
+      for(let i=1;i<steps;i++){
+        const x = n.x + (neighbor.x-n.x)*i/steps;
+        const y = n.y + (neighbor.y-n.y)*i/steps;
+        virtualNodes.push({id:`v-${n.id}-${neighbor.id}-${i}`, x, y, neighbors:[]});
+      }
+      virtualNodes.push({...neighbor}); // 端点も追加
+    });
+    virtualNodes.push({...n}); // 自身も追加
+  });
+
+  const allNodes = nodes.concat(virtualNodes);
+
+  // ノード間の仮想接続
+  nodes.forEach(n=>{
+    n.neighbors.forEach(id=>{
+      const neighbor = nodes.find(x=>x.id===id);
+      if(!neighbor) return;
+      // 端点ノードに接続
+      const vn1 = allNodes.find(v=>v.x===n.x && v.y===n.y);
+      const vn2 = allNodes.find(v=>v.x===neighbor.x && v.y===neighbor.y);
+      if(vn1 && vn2 && !vn1.neighbors.includes(vn2.id)) vn1.neighbors.push(vn2.id);
+      if(vn2 && !vn2.neighbors.includes(vn1.id)) vn2.neighbors.push(vn1.id);
+    });
+  });
+
+  // ===== ユーザマーカー =====
+  const userMarker=document.createElement("div");
+  userMarker.id="user-marker";
+  userMarker.style.left=user.x*scale+"px";
+  userMarker.style.top=user.y*scale+"px";
+  lot.appendChild(userMarker);
 
   // ===== 最短経路（空きロッドまで） =====
   const emptyRods = rods.filter(r=>r.status===0);
@@ -127,11 +154,11 @@ function renderAll(){
   let minDist = Infinity;
 
   emptyRods.forEach(r=>{
-    const path = findPath(user, {x:r.x, y:r.y});
+    const path = findPath(user, {x:r.x, y:r.y}, allNodes);
     if(path.length>0){
       let dist = 0;
       for(let i=0;i<path.length-1;i++){
-        dist += Math.hypot(path[i+1].x-path[i].x, path[i+1].y-path[i].y);
+        dist += Math.hypot(path[i+1].x-path[i].x,path[i+1].y-path[i].y);
       }
       if(dist<minDist){
         minDist = dist;
@@ -141,7 +168,7 @@ function renderAll(){
   });
 
   if(targetRod){
-    const path = findPath(user, {x:targetRod.x, y:targetRod.y});
+    const path = findPath(user, {x:targetRod.x, y:targetRod.y}, allNodes);
     for(let i=0;i<path.length-1;i++){
       const line=document.createElement("div");
       line.className="path-line";
@@ -151,7 +178,7 @@ function renderAll(){
       line.style.position="absolute";
       line.style.left=x1+"px"; line.style.top=y1+"px";
       line.style.width=length+"px"; line.style.height="3px";
-      line.style.background="#2196f3"; // 青い案内線のみ
+      line.style.background="#2196f3"; // 青い案内線
       line.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;
       line.style.transformOrigin="0 0";
       line.style.zIndex=2;
@@ -160,7 +187,7 @@ function renderAll(){
   }
 }
 
-// ===== ユーザ移動（十字キー） =====
+// ===== ユーザ移動 =====
 document.addEventListener("keydown",e=>{
   switch(e.key){
     case "ArrowUp": user.y-=userSpeed; break;
