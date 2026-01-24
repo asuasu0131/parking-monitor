@@ -8,6 +8,18 @@ let parking = { width:200, height:100 }; // 仮初期値
 
 const socket = io();
 
+// 開発用ユーザマーカー
+let user = { x: 50, y: 50 }; // m単位
+const USER_SPEED = 2; // 1キー押しで何m移動するか
+
+// マーカー作成
+let userMarker = document.getElementById("user-marker");
+if(!userMarker){
+  userMarker = document.createElement("div");
+  userMarker.id = "user-marker";
+  lot.appendChild(userMarker);
+}
+
 // 管理者からのレイアウト取得
 async function loadLayout() {
   const res = await fetch("/parking_layout.json");
@@ -63,9 +75,33 @@ function renderRods() {
     d.style.zIndex = 2;
     lot.appendChild(d);
   });
+
+  // ユーザマーカー位置更新
+  updateUserMarker();
 }
 
+// ユーザマーカー位置更新
+function updateUserMarker(){
+  let scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
+  userMarker.style.left = user.x * scale + "px";
+  userMarker.style.top  = user.y * scale + "px";
+}
+
+// キーボード操作で移動
+window.addEventListener("keydown", (e)=>{
+  switch(e.key){
+    case "ArrowUp":    user.y = Math.max(0, user.y - USER_SPEED); break;
+    case "ArrowDown":  user.y = Math.min(parking.height, user.y + USER_SPEED); break;
+    case "ArrowLeft":  user.x = Math.max(0, user.x - USER_SPEED); break;
+    case "ArrowRight": user.x = Math.min(parking.width, user.x + USER_SPEED); break;
+  }
+  updateUserMarker();
+});
+
+// Socket更新
 socket.on("layout_updated", loadLayout);
+
+// ズームスライダー
 zoomSlider.addEventListener("input", ()=>{ zoomScale = parseFloat(zoomSlider.value); });
 loadLayout();
 
