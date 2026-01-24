@@ -1,4 +1,26 @@
-[
-  { "id": "A1", "x": 10, "y": 10, "status": 0 },
-  { "id": "A2", "x": 20, "y": 10, "status": 0 }
-]
+{
+  "parking": {
+    "width": 200,
+    "height": 100
+  },
+  "rods": [
+    {
+      "id": "A1",
+      "x": 10,
+      "y": 10,
+      "width": 2.5,
+      "height": 5,
+      "angle": 0,
+      "status": 0
+    },
+    {
+      "id": "A2",
+      "x": 20,
+      "y": 10,
+      "width": 2.5,
+      "height": 5,
+      "angle": 0,
+      "status": 1
+    }
+  ]
+}

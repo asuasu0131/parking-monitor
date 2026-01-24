@@ -127,13 +127,22 @@ document.getElementById("add-rod").onclick = ()=>{
   render();
 };
 
-document.getElementById("save-layout").onclick = async ()=>{
-  await fetch("/save_layout",{
+document.getElementById("save-layout").onclick = async () => {
+  const data = {
+    parking: {
+      width: parking.width,
+      height: parking.height
+    },
+    rods: rods
+  };
+
+  const res = await fetch("/save_layout", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(rods)
+    body:JSON.stringify(data)
   });
-  alert("保存しました");
+
+  if(res.ok) alert("保存しました");
 };
 
 zoomSlider.oninput = ()=>{
