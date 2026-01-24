@@ -44,13 +44,27 @@ function setAerialBackground() {
   const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
   const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
 
-  const widthPx = Math.abs(bottomRight.x - topLeft.x);
-  const heightPx = Math.abs(bottomRight.y - topLeft.y);
+  const tileSize = 256;
+  const minTileX = Math.floor(topLeft.x / tileSize);
+  const maxTileX = Math.floor(bottomRight.x / tileSize);
+  const minTileY = Math.floor(topLeft.y / tileSize);
+  const maxTileY = Math.floor(bottomRight.y / tileSize);
 
-  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x/256), Math.floor(topLeft.y/256), zoom)})`;
-  container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
-  container.style.backgroundPosition = `0px 0px`;
-  container.style.backgroundRepeat = "no-repeat";
+  // まず container 内を空に
+  container.innerHTML = '';
+
+  for (let x = minTileX; x <= maxTileX; x++) {
+    for (let y = minTileY; y <= maxTileY; y++) {
+      const img = document.createElement('img');
+      img.src = getTileUrl(x, y, zoom);
+      img.style.position = 'absolute';
+      img.style.width = tileSize + 'px';
+      img.style.height = tileSize + 'px';
+      img.style.left = (x * tileSize - topLeft.x) + 'px';
+      img.style.top  = (y * tileSize - topLeft.y) + 'px';
+      container.appendChild(img);
+    }
+  }
 }
 
 // ===== 描画 =====
