@@ -14,7 +14,6 @@ const GRID_M = 5;
 let parking = { lat1:35.0, lng1:135.0, lat2:34.999, lng2:135.002, width:0, height:0 };
 let rods = [];
 let nodes = [];
-let selectedNode = null;
 
 // ===== 背景画像 =====
 let aerialImg = null;
@@ -38,16 +37,16 @@ function latLngToPixel(lat, lng, zoom) {
   };
 }
 
-// ===== タイルURL =====
+// ===== タイルURL（Esri 無料）=====
 function getTileUrl(x, y, z) {
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 }
 
-// ===== 背景（1枚だけ取得）=====
+// ===== 背景設定 =====
 function setAerialBackground() {
   if (!parking.lat1 || !parking.lat2) return;
 
-  const zoom = 19; // 固定
+  const zoom = 19;
   const centerLat = (parking.lat1 + parking.lat2) / 2;
   const centerLng = (parking.lng1 + parking.lng2) / 2;
 
@@ -64,16 +63,16 @@ function setAerialBackground() {
   aerialImg.style.height = "512px";
   aerialImg.style.left = "50%";
   aerialImg.style.top = "50%";
-  aerialImg.style.transformOrigin = "center center";
+  aerialImg.style.transform = "translate(-50%, -50%)";
   aerialImg.style.pointerEvents = "none";
   aerialImg.style.zIndex = 0;
 
-  container.prepend(aerialImg);
+  lot.prepend(aerialImg);
 }
 
 // ===== 描画 =====
 function render() {
-  document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
+  lot.querySelectorAll(".rod,.node,.parking-area").forEach(e=>e.remove());
 
   const scale = Math.min(
     container.clientWidth / parking.width,
@@ -82,17 +81,16 @@ function render() {
 
   lot.style.width  = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
-  lot.style.background = "transparent";
 
-  // 敷地
+  // ===== 敷地 =====
   const area = document.createElement("div");
   area.className = "parking-area";
   area.style.position = "absolute";
   area.style.width = parking.width * scale + "px";
   area.style.height = parking.height * scale + "px";
   area.style.border = "2px solid #000";
-  area.style.backgroundColor = "#bfbfbf";
-  area.style.zIndex = 0;
+  area.style.background = "transparent";
+  area.style.zIndex = 1;
 
   const gridPx = GRID_M * scale;
   area.style.backgroundImage = `
@@ -103,11 +101,12 @@ function render() {
 
   lot.appendChild(area);
 
-  // ロッド
+  // ===== ロッド =====
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0?"empty":"full");
     d.textContent = r.id;
+    d.style.zIndex = 2;
     lot.appendChild(d);
 
     const update = ()=>{
@@ -141,20 +140,6 @@ function render() {
       update();
     };
   });
-
-  // ノード
-  nodes.forEach(n=>{
-    const d = document.createElement("div");
-    d.className = "node";
-    d.style.width = d.style.height = "6px";
-    d.style.borderRadius = "50%";
-    d.style.background = "#2196f3";
-    d.style.position = "absolute";
-    d.style.left = n.x * scale - 3 + "px";
-    d.style.top  = n.y * scale - 3 + "px";
-    d.style.zIndex = 1;
-    lot.appendChild(d);
-  });
 }
 
 // ===== イベント =====
@@ -181,19 +166,11 @@ document.getElementById("add-rod").onclick = ()=>{
   render();
 };
 
+// ===== ズーム =====
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);
-};
-
-// ===== ズーム同期（背景＋lot）=====
-(function loop(){
   lot.style.transform = `scale(${zoomScale})`;
-  if (aerialImg) {
-    aerialImg.style.transform =
-      `translate(-50%, -50%) scale(${zoomScale})`;
-  }
-  requestAnimationFrame(loop);
-})();
+};
 
 // 初期化
 calcParkingSize();
