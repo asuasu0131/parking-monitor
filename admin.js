@@ -40,57 +40,74 @@ function updateScale() {
 
 function renderRods() {
   document.querySelectorAll(".rod").forEach(e => e.remove());
-  updateScale();
+
+  const scale = Math.min(
+    container.clientWidth / parking.width,
+    container.clientHeight / parking.height
+  );
+
+  lot.style.width  = parking.width * scale + "px";
+  lot.style.height = parking.height * scale + "px";
+
+  // 🔽 ここを追加
+  updateGrid(scale);
 
   rods.forEach(r => {
     const d = document.createElement("div");
-    d.className = "rod " + (r.status === 0 ? "empty" : "full");
-    d.textContent = r.id;
-
+    d.className = "rod " + (r.status===0?"empty":"full");
+    d.innerHTML = `${r.id}<br>${r.status===0?"空き":"使用中"}`;
     lot.appendChild(d);
 
-    function update() {
-      d.style.left = r.xM * scale + "px";
-      d.style.top = r.yM * scale + "px";
-      d.style.width = ROD_WIDTH_M * scale + "px";
-      d.style.height = ROD_HEIGHT_M * scale + "px";
+    function updatePosition() {
+      d.style.left = r.x * scale + "px";
+      d.style.top  = r.y * scale + "px";
+      d.style.width = r.width * scale + "px";
+      d.style.height = r.height * scale + "px";
       d.style.transform = `rotate(${r.angle}deg)`;
     }
 
-    update();
-    window.addEventListener("resize", update);
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
 
-    // ドラッグ（m単位で移動）
-    d.onmousedown = e => {
-      if (e.button !== 0) return;
+    // 左ドラッグ移動
+    d.onmousedown = (e) => {
+      if(e.button!==0) return;
       e.preventDefault();
 
-      const sx = e.clientX;
-      const sy = e.clientY;
-      const ox = r.xM;
-      const oy = r.yM;
+      const startX = e.clientX, startY = e.clientY;
+      const startLeft = r.x, startTop = r.y;
 
-      function move(ev) {
-        r.xM = ox + (ev.clientX - sx) / scale;
-        r.yM = oy + (ev.clientY - sy) / scale;
-        update();
+      function move(ev){
+        r.x = startLeft + (ev.clientX - startX)/scale;
+        r.y = startTop  + (ev.clientY - startY)/scale;
+        updatePosition();
       }
-      function up() {
+      function up(){
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
       }
-
       document.addEventListener("mousemove", move);
       document.addEventListener("mouseup", up);
     };
 
     // 右クリック回転
-    d.oncontextmenu = e => {
+    d.oncontextmenu = (e)=>{
       e.preventDefault();
       r.angle = (r.angle + 90) % 360;
-      update();
+      updatePosition();
     };
   });
+}
+
+function updateGrid(scale) {
+  const GRID_M = 5; // 5m間隔
+  const gridPx = GRID_M * scale;
+
+  lot.style.backgroundImage = `
+    linear-gradient(to right, #aaa 1px, transparent 1px),
+    linear-gradient(to bottom, #aaa 1px, transparent 1px)
+  `;
+  lot.style.backgroundSize = `${gridPx}px ${gridPx}px`;
 }
 
 /* ===== UI ===== */
