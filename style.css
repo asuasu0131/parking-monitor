@@ -5,14 +5,52 @@ button { padding:6px 10px; font-size:14px; margin:2px; }
 #controller { margin-bottom:8px; }
 #zoom-slider { width:80%; margin:6px auto; }
 #parking-lot-container {
-  position:relative; width:100%; max-width:900px; aspect-ratio:9/6.5;
-  margin:auto; overflow:hidden; border-radius:10px; background:#bfbfbf; cursor:crosshair;
+  position:relative;
+  width:100%;
+  max-width:900px;
+  aspect-ratio:9/6.5;
+  margin:auto;
+  overflow:hidden;
+  background:#aaa;
+  border-radius:12px;
 }
+
+/* 駐車場本体 */
 #parking-lot {
-  position:absolute; width:100%; height:100%;
-  top:0; left:0;
-  transform-origin: center center;
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #777,
+      #777 10px,
+      #7c7c7c 10px,
+      #7c7c7c 20px
+    );
+  border:4px solid #333;
+  border-radius:10px;
+  box-sizing:border-box;
+  transform-origin:center center;
 }
+
+/* PARKINGラベル */
+#parking-label {
+  position:absolute;
+  top:8px;
+  left:12px;
+  font-size:14px;
+  font-weight:bold;
+  color:white;
+  background:rgba(0,0,0,0.5);
+  padding:4px 8px;
+  border-radius:6px;
+  z-index:5;
+}
+
+/* ロッドは今まで通り */
 .rod {
   position:absolute;
   display:flex;
@@ -21,10 +59,10 @@ button { padding:6px 10px; font-size:14px; margin:2px; }
   color:white;
   font-weight:bold;
   border:1px solid white;
-  cursor:move;
   user-select:none;
   transform-origin:center center;
 }
+
 .empty { background:#4caf50; }
 .full  { background:#f44336; }
 

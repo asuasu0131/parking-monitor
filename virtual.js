@@ -17,17 +17,22 @@ function renderRods() {
 
   let maxX = Math.max(...rods.map(r=>r.x + r.width));
   let maxY = Math.max(...rods.map(r=>r.y + r.height));
-  let scale = Math.min(container.clientWidth/maxX, container.clientHeight/maxY);
-  lot.style.width = maxX*scale + "px";
-  lot.style.height = maxY*scale + "px";
+
+  const scale = Math.min(
+    container.clientWidth / maxX,
+    container.clientHeight / maxY
+  );
+
+  lot.style.width  = maxX * scale + "px";
+  lot.style.height = maxY * scale + "px";
 
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0?"empty":"full");
-    d.style.left = r.x*scale + "px";
-    d.style.top  = r.y*scale + "px";
-    d.style.width = r.width*scale + "px";
-    d.style.height = r.height*scale + "px";
+    d.style.left = r.x * scale + "px";
+    d.style.top  = r.y * scale + "px";
+    d.style.width  = r.width  * scale + "px";
+    d.style.height = r.height * scale + "px";
     d.style.transform = `rotate(${r.angle}deg)`;
     lot.appendChild(d);
   });
