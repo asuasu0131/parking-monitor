@@ -31,11 +31,22 @@ function calcParkingSize() {
 function setAerialBackground() {
   if (!parking.width || !parking.height) return;
 
+  // 既存の画像を削除
+  if (aerialImg) aerialImg.remove();
+
   aerialImg = document.createElement("img");
-  aerialImg.src = "parking_bg.png"; // ローカル画像
+  // HTML からの相対パスで指定
+  aerialImg.src = "./parking_bg.png"; 
+  aerialImg.alt = "Parking Background";
   aerialImg.style.position = "absolute";
+  aerialImg.style.left = "50%";
+  aerialImg.style.top = "50%";
+  aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
   aerialImg.style.pointerEvents = "none";
   aerialImg.style.zIndex = 0;
+  aerialImg.style.display = "block"; // ← 非表示にならないように
+  aerialImg.style.maxWidth = "none";  // 自動縮小を無効化
+  aerialImg.style.maxHeight = "none";
 
   // 駐車場のサイズに合わせる
   const scale = Math.min(
@@ -44,11 +55,12 @@ function setAerialBackground() {
   );
   aerialImg.style.width  = parking.width * scale + "px";
   aerialImg.style.height = parking.height * scale + "px";
-  aerialImg.style.left   = "50%";
-  aerialImg.style.top    = "50%";
-  aerialImg.style.transform = "translate(-50%, -50%) scale(" + zoomScale + ")";
 
+  // lot 内に追加
   lot.prepend(aerialImg);
+
+  // lot の position を relative にして、子要素の絶対配置を有効にする
+  lot.style.position = "relative";
 }
 
 // ===== 描画 =====
