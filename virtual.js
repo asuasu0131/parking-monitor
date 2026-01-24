@@ -10,6 +10,9 @@ const userSpeed = 1; // 1m/キー押下
 
 const socket = io();
 
+// ユーザマーカー要素をグローバルで保持
+let userMarker = null;
+
 // 管理者レイアウト取得
 async function loadLayout(){
   const res = await fetch("/parking_layout.json");
@@ -23,6 +26,14 @@ async function loadLayout(){
     parking = {width:200,height:100};
     nodes = [];
   }
+
+  // 初回ユーザマーカー作成
+  if(!userMarker){
+    userMarker = document.createElement("div");
+    userMarker.id = "user-marker";
+    lot.appendChild(userMarker);
+  }
+
   renderAll();
 }
 
@@ -70,8 +81,8 @@ function findPath(startPos, targetPos){
 
 // ===== 描画 =====
 function renderAll(){
-  // 前回の描画を全削除（ユーザマーカーも含む）
-  document.querySelectorAll(".rod,.user-marker,.path-line").forEach(e=>e.remove());
+  // ロッド・経路のみ削除（ユーザマーカーは消さない）
+  document.querySelectorAll(".rod,.path-line").forEach(e=>e.remove());
 
   const scale=Math.min(container.clientWidth/parking.width,container.clientHeight/parking.height);
   lot.style.width = parking.width*scale+"px";
@@ -106,12 +117,9 @@ function renderAll(){
     lot.appendChild(d);
   });
 
-  // ===== ユーザマーカー =====
-  const userMarker=document.createElement("div");
-  userMarker.id="user-marker";
-  userMarker.style.left=user.x*scale+"px";
-  userMarker.style.top=user.y*scale+"px";
-  lot.appendChild(userMarker);
+  // ===== ユーザマーカー位置更新 =====
+  userMarker.style.left = user.x*scale + "px";
+  userMarker.style.top  = user.y*scale + "px";
 
   // ===== 最短経路（空きロッドまで） =====
   const emptyRods = rods.filter(r=>r.status===0);
