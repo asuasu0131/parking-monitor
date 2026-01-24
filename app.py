@@ -42,6 +42,11 @@ def save_layout():
 def get_layout():
     return send_file("parking_layout.json")
 
+# ===== SocketIO イベント =====
+@socketio.on("layout_updated")
+def on_layout_updated():
+    socketio.emit("layout_updated")
+
 # ===== 起動 =====
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

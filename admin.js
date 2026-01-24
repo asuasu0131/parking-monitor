@@ -208,6 +208,29 @@ document.getElementById("add-node").onclick = ()=>{
   render();
 };
 
+// 保存ボタン
+document.getElementById("save-layout").onclick = async () => {
+  try {
+    const layout = { parking, rods, nodes };
+    const res = await fetch("/save_layout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(layout)
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      alert("レイアウトを保存しました。");
+      // Socket.IOで即時更新通知
+      socket.emit("layout_updated");
+    } else {
+      alert("保存に失敗しました。");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("保存中にエラーが発生しました。");
+  }
+};
+
 // ズーム
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);

@@ -36,6 +36,12 @@ function setAerialBackground(container, parking) {
   container.style.backgroundRepeat = "no-repeat";
 }
 
+// layout_updated イベント受信で再ロード
+socket.on("layout_updated", async () => {
+  console.log("レイアウト更新を受信");
+  await loadLayout();
+});
+
 // ===== 仮想ノード生成 =====
 function generateVirtualNodes(allNodes, step = 5) {
   const virtualNodes = [];
