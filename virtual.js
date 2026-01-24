@@ -12,14 +12,13 @@ const socket = io();
 let userMarker = null;
 let aerialImg = null;
 
-// ===== 背景画像設定 =====
+// ===== 背景画像設定（固定スクショ） =====
 function setAerialBackground(container, parking) {
-  // 常に背景画像を表示する
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
 
   if (!aerialImg) {
     aerialImg = document.createElement("img");
-    aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
+    aerialImg.src = "https://raw.githubusercontent.com/asuasu0131/parking-monitor/main/parking_bg.png"; 
     aerialImg.alt = "Parking Background";
     Object.assign(aerialImg.style, {
       position: "absolute",
@@ -31,11 +30,10 @@ function setAerialBackground(container, parking) {
       transform: `translate(-50%,-50%) scale(${zoomScale})`
     });
     lot.prepend(aerialImg);
-    // lotのpositionをrelativeに
     lot.style.position = "relative";
   }
 
-  aerialImg.style.width = parking.width * scale + "px";
+  aerialImg.style.width  = parking.width * scale + "px";
   aerialImg.style.height = parking.height * scale + "px";
   aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
 }
@@ -107,16 +105,83 @@ async function loadLayout() {
   renderAll();
 }
 
+// ===== A*探索 =====
+function findPath(startPos, targetPos, allNodes) {
+  if (allNodes.length === 0) return [];
+
+  function nearestNode(pos) {
+    return allNodes.reduce((a, b) =>
+      Math.hypot(a.x - pos.x, a.y - pos.y) < Math.hypot(b.x - pos.x, b.y - pos.y) ? a : b
+    );
+  }
+
+  const startNode = nearestNode(startPos);
+  const endNode = nearestNode(targetPos);
+
+  const open = [], closed = new Set(), cameFrom = {};
+  const gScore = {}, fScore = {};
+  allNodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; });
+  gScore[startNode.id] = 0;
+  fScore[startNode.id] = Math.hypot(startNode.x - endNode.x, startNode.y - endNode.y);
+  open.push(startNode);
+
+  while (open.length > 0) {
+    open.sort((a, b) => fScore[a.id] - fScore[b.id]);
+    const current = open.shift();
+    if (current.id === endNode.id) {
+      const path = [current];
+      while (cameFrom[path[0].id]) path.unshift(cameFrom[path[0].id]);
+      return path;
+    }
+    closed.add(current.id);
+    current.neighbors.forEach(nid => {
+      if (closed.has(nid)) return;
+      const neighbor = allNodes.find(x => x.id === nid);
+      if (!neighbor) return;
+      const tentativeG = gScore[current.id] + Math.hypot(current.x - neighbor.x, current.y - neighbor.y);
+      if (tentativeG < gScore[neighbor.id]) {
+        cameFrom[neighbor.id] = current;
+        gScore[neighbor.id] = tentativeG;
+        fScore[neighbor.id] = tentativeG + Math.hypot(neighbor.x - endNode.x, neighbor.y - endNode.y);
+        if (!open.includes(neighbor)) open.push(neighbor);
+      }
+    });
+  }
+
+  return [];
+}
+
+// ===== Catmull-Rom スプライン関数 =====
+function catmullRomSpline(points, tension = 0.5, numPoints = 10) {
+  if (points.length < 2) return [];
+  const result = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+
+    for (let t = 0; t <= 1; t += 1 / numPoints) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const x = 0.5 * ((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x-3*p2.x+p3.x)*t3);
+      const y = 0.5 * ((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y-3*p2.y+p3.y)*t3);
+      result.push({ x, y });
+    }
+  }
+  result.push(points[points.length-1]);
+  return result;
+}
+
 // ===== 描画 =====
 function renderAll() {
-  // 背景以外を削除
   document.querySelectorAll(".rod,.path-line,.parking-area,#path-svg").forEach(e => e.remove());
 
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
   lot.style.width = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
-  // 背景更新
+  // 背景更新（固定スクショ）
   setAerialBackground(container, parking);
 
   // 敷地
@@ -149,8 +214,10 @@ function renderAll() {
   userMarker.style.left = user.x * scale + "px";
   userMarker.style.top = user.y * scale + "px";
 
-  // 経路探索などの既存機能は変更なし
+  // 仮想ノード生成
   const allNodes = generateVirtualNodes(nodes, 5);
+
+  // 経路探索
   const emptyRods = rods.filter(r => r.status === 0);
   let targetRod = null;
   let minDist = Infinity;
@@ -210,11 +277,7 @@ document.addEventListener("keydown", e => {
 });
 
 // ===== ズーム =====
-zoomSlider.addEventListener("input", () => {
-  zoomScale = parseFloat(zoomSlider.value);
-  lot.style.transform = `scale(${zoomScale})`;
-  if (aerialImg) aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
-});
+zoomSlider.addEventListener("input", () => { zoomScale = parseFloat(zoomSlider.value); });
 
 // 初期化
 loadLayout();
