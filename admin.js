@@ -118,19 +118,25 @@ function render() {
     });
   });
 
-  // ===== ノード描画 =====
-  nodes.forEach(n=>{
-    const d = document.createElement("div");
-    d.className = "node";
-    d.style.left = n.x*scale -4 + "px";
-    d.style.top  = n.y*scale -4 + "px";
-    d.style.zIndex = 1;
-    lot.appendChild(d);
+// ===== ノード描画 =====
+nodes.forEach(n=>{
+  const d = document.createElement("div");
+  d.className = "node";
+  const size = 6; // 小さめに
+  d.style.width  = size + "px";
+  d.style.height = size + "px";
+  d.style.borderRadius = "50%"; // 丸に
+  d.style.background = "#2196f3";
+  d.style.position = "absolute";
+  d.style.left = (n.x*scale - size/2) + "px"; // 中心基準
+  d.style.top  = (n.y*scale - size/2) + "px";
+  d.style.zIndex = 1;
+  lot.appendChild(d);
 
-    if(selectedNode && selectedNode.id === n.id){
-      d.style.border = "2px dashed blue";
-    }
-  });
+  if(selectedNode && selectedNode.id === n.id){
+    d.style.border = "2px dashed blue";
+  }
+});
 }
 
 // ===== イベント =====
