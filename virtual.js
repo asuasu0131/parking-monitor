@@ -12,33 +12,32 @@ const socket = io();
 let userMarker = null;
 let aerialImg = null;
 
-// ===== 背景画像設定（固定スクショ） =====
-function setAerialBackground(container, parking) {
-  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
-
-  if (!aerialImg) {
-    aerialImg = document.createElement("img");
-    aerialImg.src = "https://raw.githubusercontent.com/asuasu0131/parking-monitor/main/parking_bg.png"; 
-    aerialImg.alt = "Parking Background";
-    Object.assign(aerialImg.style, {
-      position: "absolute",
-      left: "50%",
-      top: "50%",
-      pointerEvents: "none",
-      zIndex: 0,
-      display: "block",
-      transform: `translate(-50%,-50%) scale(${zoomScale})`
-    });
-    lot.prepend(aerialImg);
-    lot.style.position = "relative";
-  }
-
-  aerialImg.style.width  = parking.width * scale + "px";
-  aerialImg.style.height = parking.height * scale + "px";
-  aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
+// ===== 座標変換・背景設定 =====
+function latLngToPixel(lat, lng, zoom) {
+  const sinLat = Math.sin(lat * Math.PI / 180);
+  const x = ((lng + 180) / 360) * 256 * Math.pow(2, zoom);
+  const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * 256 * Math.pow(2, zoom);
+  return { x, y };
 }
 
-// ===== layout 更新受信 =====
+function getTileUrl(x, y, z) {
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+}
+
+function setAerialBackground(container, parking) {
+  if (!parking.lat1 || !parking.lat2 || !parking.lng1 || !parking.lng2) return;
+  const zoom = 19;
+  const topLeft = latLngToPixel(parking.lat1, parking.lng1, zoom);
+  const bottomRight = latLngToPixel(parking.lat2, parking.lng2, zoom);
+  const widthPx = Math.abs(bottomRight.x - topLeft.x);
+  const heightPx = Math.abs(bottomRight.y - topLeft.y);
+  container.style.backgroundImage = `url(${getTileUrl(Math.floor(topLeft.x / 256), Math.floor(topLeft.y / 256), zoom)})`;
+  container.style.backgroundSize = `${widthPx}px ${heightPx}px`;
+  container.style.backgroundPosition = `0px 0px`;
+  container.style.backgroundRepeat = "no-repeat";
+}
+
+// layout_updated イベント受信で再ロード
 socket.on("layout_updated", async () => {
   console.log("レイアウト更新を受信");
   await loadLayout();
@@ -101,7 +100,7 @@ async function loadLayout() {
     lot.appendChild(userMarker);
   }
 
-  setAerialBackground(container, parking);
+  setAerialBackground(container, parking); // 背景設定
   renderAll();
 }
 
@@ -181,8 +180,7 @@ function renderAll() {
   lot.style.width = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
-  // 背景更新（固定スクショ）
-  setAerialBackground(container, parking);
+  container.style.background = "#888";
 
   // 敷地
   const parkingArea = document.createElement("div");
@@ -217,7 +215,7 @@ function renderAll() {
   // 仮想ノード生成
   const allNodes = generateVirtualNodes(nodes, 5);
 
-  // 経路探索
+  // 最短経路計算
   const emptyRods = rods.filter(r => r.status === 0);
   let targetRod = null;
   let minDist = Infinity;
@@ -236,11 +234,16 @@ function renderAll() {
     }
   });
 
-  if (targetRod) {
+if (targetRod) {
     let path = findPath(user, { x: targetRod.x, y: targetRod.y }, allNodes);
-    if (path.length > 0) path.push({ x: targetRod.x, y: targetRod.y });
 
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    // pathの最後にロッド座標を追加
+    if (path.length > 0) {
+        path.push({ x: targetRod.x, y: targetRod.y });
+    }
+
+    // SVG 用意
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.id = "path-svg";
     svg.style.position = "absolute";
     svg.style.left = "0";
@@ -251,9 +254,11 @@ function renderAll() {
     svg.style.zIndex = 2;
     lot.appendChild(svg);
 
+    // path を描画（ノードを直線でつなぐ）
     let d = `M ${path[0].x*scale} ${path[0].y*scale}`;
-    for (let i = 1; i < path.length; i++) d += ` L ${path[i].x*scale} ${path[i].y*scale}`;
-
+    for (let i = 1; i < path.length; i++) {
+        d += ` L ${path[i].x*scale} ${path[i].y*scale}`;
+    }
     const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
     pathEl.setAttribute("d", d);
     pathEl.setAttribute("stroke","#2196f3");
@@ -262,7 +267,7 @@ function renderAll() {
     pathEl.setAttribute("stroke-linecap","round");
     pathEl.setAttribute("stroke-linejoin","round");
     svg.appendChild(pathEl);
-  }
+    }
 }
 
 // ===== ユーザ移動 =====
