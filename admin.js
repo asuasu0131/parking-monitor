@@ -24,16 +24,6 @@ function calcParkingSize() {
   parking.height = Math.abs(latDist);
 }
 
-// ===== グリッド描画 =====
-function updateGrid(scale) {
-  const gridPx = GRID_M * scale;
-  lot.style.backgroundImage = `
-    linear-gradient(to right, #aaa 1px, transparent 1px),
-    linear-gradient(to bottom, #aaa 1px, transparent 1px)
-  `;
-  lot.style.backgroundSize = `${gridPx}px ${gridPx}px`;
-}
-
 // ===== 描画 =====
 function render() {
   document.querySelectorAll(".rod,.node,.node-line,.parking-area").forEach(e=>e.remove());
@@ -41,10 +31,9 @@ function render() {
 
   lot.style.width  = parking.width  * scale + "px";
   lot.style.height = parking.height * scale + "px";
+  lot.style.background = "transparent"; // 背景は透明
 
-  updateGrid(scale);
-
-  // 敷地内
+  // ===== 敷地内（灰色 + グリッド） =====
   const parkingArea = document.createElement("div");
   parkingArea.className = "parking-area";
   parkingArea.style.position = "absolute";
@@ -55,9 +44,18 @@ function render() {
   parkingArea.style.background = "#bfbfbf"; // 薄い灰色
   parkingArea.style.border = "2px solid #000";
   parkingArea.style.zIndex = 0;
+
+  // グリッド描画
+  const gridPx = GRID_M * scale;
+  parkingArea.style.backgroundImage = `
+    linear-gradient(to right, #aaa 1px, transparent 1px),
+    linear-gradient(to bottom, #aaa 1px, transparent 1px)
+  `;
+  parkingArea.style.backgroundSize = `${gridPx}px ${gridPx}px`;
+
   lot.appendChild(parkingArea);
 
-  // ロッド描画
+  // ===== ロッド描画 =====
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0?"empty":"full");
@@ -83,7 +81,7 @@ function render() {
     d.oncontextmenu = e=>{ e.preventDefault(); r.angle=(r.angle+90)%360; updatePos(); };
   });
 
-  // 通路ノード描画
+  // ===== 通路ノード描画 =====
   nodes.forEach(n=>{
     const d = document.createElement("div");
     d.className = "node";
