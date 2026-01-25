@@ -181,38 +181,46 @@ function renderAll() {
   // 仮想ノード生成
   const allNodes = generateVirtualNodes(nodes,5);
 
-  // 最短経路描画
+  // 最短経路描画（ゴールはロッドに最も近いノード）
   const emptyRods = rods.filter(r=>r.status===0);
-  let targetRod=null, minDist=Infinity;
+  let targetRod=null, targetNode=null, minDist=Infinity;
+
   emptyRods.forEach(r=>{
-    const path = findPath(user,{x:r.x,y:r.y},allNodes);
-    if(path.length>0){
-      let dist=0; for(let i=0;i<path.length-1;i++) dist+=Math.hypot(path[i+1].x-path[i].x,path[i+1].y-path[i].y);
-      if(dist<minDist){ minDist=dist; targetRod=r; }
+    // ロッドに最も近いノードを探す
+    const nearestNode = allNodes.reduce((a,b)=>{
+      const da = Math.hypot(a.x-r.x,a.y-r.y);
+      const db = Math.hypot(b.x-r.x,b.y-r.y);
+      return da<db?a:b;
+    });
+    const distToUser = Math.hypot(nearestNode.x-user.x, nearestNode.y-user.y);
+    if(distToUser<minDist){
+      minDist = distToUser;
+      targetRod = r;
+      targetNode = nearestNode;
     }
   });
 
-  if(targetRod){
-    let path = findPath(user,{x:targetRod.x,y:targetRod.y},allNodes);
-    if(path.length>0) path.push({x:targetRod.x,y:targetRod.y});
+  if(targetNode){
+    const path = findPath(user, {x:targetNode.x, y:targetNode.y}, allNodes);
+    if(path.length>0){
+      const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+      svg.id="path-svg";
+      Object.assign(svg.style,{
+        position:"absolute", left:"0", top:"0", width:"100%", height:"100%", pointerEvents:"none", zIndex:2
+      });
+      lot.appendChild(svg);
 
-    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    svg.id="path-svg";
-    Object.assign(svg.style,{
-      position:"absolute", left:"0", top:"0", width:"100%", height:"100%", pointerEvents:"none", zIndex:2
-    });
-    lot.appendChild(svg);
-
-    let d=`M ${path[0].x*scale} ${path[0].y*scale}`;
-    for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
-    const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
-    pathEl.setAttribute("d",d);
-    pathEl.setAttribute("stroke","#2196f3");
-    pathEl.setAttribute("stroke-width","6");
-    pathEl.setAttribute("fill","none");
-    pathEl.setAttribute("stroke-linecap","round");
-    pathEl.setAttribute("stroke-linejoin","round");
-    svg.appendChild(pathEl);
+      let d=`M ${path[0].x*scale} ${path[0].y*scale}`;
+      for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
+      const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
+      pathEl.setAttribute("d",d);
+      pathEl.setAttribute("stroke","#2196f3");
+      pathEl.setAttribute("stroke-width","6");
+      pathEl.setAttribute("fill","none");
+      pathEl.setAttribute("stroke-linecap","round");
+      pathEl.setAttribute("stroke-linejoin","round");
+      svg.appendChild(pathEl);
+    }
   }
 }
 
