@@ -13,6 +13,29 @@
   <div id="parking-lot"></div>
 </div>
 
+<!-- 簡易コントローラ（開発用） -->
+<div id="dev-controller" style="
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 50px 50px 50px;
+  grid-template-rows: 50px 50px 50px;
+  gap: 5px;
+  z-index: 2000;
+">
+  <div></div>
+  <button id="up-btn">▲</button>
+  <div></div>
+  <button id="left-btn">◀</button>
+  <div></div>
+  <button id="right-btn">▶</button>
+  <div></div>
+  <button id="down-btn">▼</button>
+  <div></div>
+</div>
+
 <input type="range" id="zoom-slider" min="0.5" max="2" step="0.01" value="1">
 
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>

@@ -5,7 +5,11 @@ const zoomSlider = document.getElementById("zoom-slider");
 let rods = [], nodes = [], links = [];
 let zoomScale = 1;
 let parking = { width: 200, height: 100 };
-let user = { x: 10, y: 10 };
+// ユーザマーカー初期位置：駐車場右下（少し内側にオフセット）
+let user = { 
+  x: parking.width - 15,  // 右端から15px内側
+  y: parking.height - 15  // 下端から15px内側
+};
 const userSpeed = 1;
 
 let selectedRod = null; // ユーザ選択ロッド（グローバル変数）
@@ -94,6 +98,11 @@ async function loadLayout() {
   }
 
   setAerialBackground();
+
+    // マーカー初期位置を右下に設定
+  user.x = parking.width - 15;
+  user.y = parking.height - 15;
+  
   renderAll();
 }
 
