@@ -284,3 +284,9 @@ loadLayout();
 
 // ズームループ
 (function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
+
+// ===== 開発用簡易コントローラ =====
+document.getElementById("up-btn").addEventListener("click", ()=>{ user.y-=userSpeed; renderAll(); });
+document.getElementById("down-btn").addEventListener("click", ()=>{ user.y+=userSpeed; renderAll(); });
+document.getElementById("left-btn").addEventListener("click", ()=>{ user.x-=userSpeed; renderAll(); });
+document.getElementById("right-btn").addEventListener("click", ()=>{ user.x+=userSpeed; renderAll(); });
