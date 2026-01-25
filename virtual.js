@@ -201,27 +201,31 @@ function renderAll() {
   });
 
   if(targetNode){
-    const path = findPath(user, {x:targetNode.x + (r.width || 2.5)/2, y:targetNode.y + (r.height || 5)/2}, allNodes);
-    if(path.length>0){
-      const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-      svg.id="path-svg";
-      Object.assign(svg.style,{
-        position:"absolute", left:"0", top:"0", width:"100%", height:"100%", pointerEvents:"none", zIndex:2
-      });
-      lot.appendChild(svg);
+  const centerX = targetRod.x + (targetRod.width || 2.5)/2;
+  const centerY = targetRod.y + (targetRod.height || 5)/2;
 
-      let d=`M ${path[0].x*scale} ${path[0].y*scale}`;
-      for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
-      const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
-      pathEl.setAttribute("d",d);
-      pathEl.setAttribute("stroke","#005aa4ff");
-      pathEl.setAttribute("stroke-width","11");
-      pathEl.setAttribute("fill","none");
-      pathEl.setAttribute("stroke-linecap","round");
-      pathEl.setAttribute("stroke-linejoin","round");
-      svg.appendChild(pathEl);
-    }
+  const path = findPath(user, {x: centerX, y: centerY}, allNodes);
+
+  if(path.length>0){
+    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.id="path-svg";
+    Object.assign(svg.style,{
+      position:"absolute", left:"0", top:"0", width:"100%", height:"100%", pointerEvents:"none", zIndex:2
+    });
+    lot.appendChild(svg);
+
+    let d=`M ${path[0].x*scale} ${path[0].y*scale}`;
+    for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
+    const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
+    pathEl.setAttribute("d",d);
+    pathEl.setAttribute("stroke","#005aa4ff");
+    pathEl.setAttribute("stroke-width","11");
+    pathEl.setAttribute("fill","none");
+    pathEl.setAttribute("stroke-linecap","round");
+    pathEl.setAttribute("stroke-linejoin","round");
+    svg.appendChild(pathEl);
   }
+}
 }
 
 // ===== ユーザ移動 =====
