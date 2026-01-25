@@ -8,6 +8,8 @@ let parking = { width: 200, height: 100 };
 let user = { x: 10, y: 10 };
 const userSpeed = 1;
 
+let selectedRod = null; // ユーザ選択ロッド（グローバル変数）
+
 const socket = io();
 let userMarker = null;
 let aerialImg = null;
@@ -159,34 +161,52 @@ function renderAll() {
   });
   lot.appendChild(parkingArea);
 
-  // ロッド描画
-  rods.forEach(r=>{
-    const d = document.createElement("div");
-    d.className="rod " + (r.status===0?"empty":"full");
-    Object.assign(d.style,{
-      left: r.x*scale+"px",
-      top: r.y*scale+"px",
-      width: (r.width||2.5)*scale+"px",
-      height: (r.height||5)*scale+"px",
-      transform:`rotate(${r.angle||0}deg)`,
-      zIndex:1
-    });
-    lot.appendChild(d);
+// --- ロッド描画部分を修正 ---
+rods.forEach(r=>{
+  const d = document.createElement("div");
+  d.className="rod " + (r.status===0?"empty":"full");
+  Object.assign(d.style,{
+    left: r.x*scale+"px",
+    top: r.y*scale+"px",
+    width: (r.width||2.5)*scale+"px",
+    height: (r.height||5)*scale+"px",
+    transform:`rotate(${r.angle||0}deg)`,
+    zIndex:1,
+    cursor:"pointer"
   });
+  lot.appendChild(d);
 
+  // クリックで選択
+  d.onclick = ()=>{
+    if(r.status===0){ // 空きロッドのみ選択
+      selectedRod = r;
+      renderAll();
+    }
+  };
+});
   // ユーザマーカー
   userMarker.style.left = user.x*scale+"px";
   userMarker.style.top = user.y*scale+"px";
 
-  // 仮想ノード生成
-  const allNodes = generateVirtualNodes(nodes,2);
+// ---- 経路描画 ----
+const allNodes = generateVirtualNodes(nodes,2);
 
-  // 最短経路描画（ゴールはロッドに最も近いノード）
+let targetRod = null;
+let targetNode = null;
+
+if(selectedRod){
+  targetRod = selectedRod;
+  // 選択ロッドの最寄りノード
+  targetNode = allNodes.reduce((a,b)=>{
+    const da = Math.hypot(a.x-(targetRod.x+(targetRod.width||2.5)/2), a.y-(targetRod.y+(targetRod.height||5)/2));
+    const db = Math.hypot(b.x-(targetRod.x+(targetRod.width||2.5)/2), b.y-(targetRod.y+(targetRod.height||5)/2));
+    return da<db?a:b;
+  });
+} else {
+  // 今まで通り、ユーザから最も近い空きロッド
+  let minDist = Infinity;
   const emptyRods = rods.filter(r=>r.status===0);
-  let targetRod=null, targetNode=null, minDist=Infinity;
-
   emptyRods.forEach(r=>{
-    // ロッドに最も近いノードを探す
     const nearestNode = allNodes.reduce((a,b)=>{
       const da = Math.hypot(a.x-r.x,a.y-r.y);
       const db = Math.hypot(b.x-r.x,b.y-r.y);
@@ -199,12 +219,14 @@ function renderAll() {
       targetNode = nearestNode;
     }
   });
+}
 
-  if(targetNode){
+// ---- パス描画 ----
+if(targetNode){
   const centerX = targetRod.x + (targetRod.width || 2.5)/2;
   const centerY = targetRod.y + (targetRod.height || 5)/2;
 
-  const path = findPath(user, {x: centerX, y: centerY}, allNodes);
+  const path = findPath(user, {x:centerX, y:centerY}, allNodes);
 
   if(path.length>0){
     const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
