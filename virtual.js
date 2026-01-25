@@ -18,13 +18,6 @@ const socket = io();
 let userMarker = null;
 let aerialImg = null;
 
-let offsetX = 0;
-let offsetY = 0;
-
-let isDragging = false;
-let lastX = 0;
-let lastY = 0;
-
 // ===== 背景設定 =====
 function setAerialBackground() {
   if (!parking.width || !parking.height) return;
@@ -272,8 +265,7 @@ if(targetNode){
     const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
     pathEl.setAttribute("d",d);
     pathEl.setAttribute("stroke","#005aa4ff");
-    pathEl.setAttribute("stroke-width","10");
-
+    pathEl.setAttribute("stroke-width","11");
     pathEl.setAttribute("fill","none");
     pathEl.setAttribute("stroke-linecap","round");
     pathEl.setAttribute("stroke-linejoin","round");
@@ -300,23 +292,7 @@ zoomSlider.addEventListener("input",()=>{ zoomScale=parseFloat(zoomSlider.value)
 loadLayout();
 
 // ズームループ
-(function loop() {
-  const scale = zoomScale;
-
-  // ユーザ中心に transform-origin を設定
-  const containerRect = container.getBoundingClientRect();
-  const userX = user.x * scale;
-  const userY = user.y * scale;
-
-  // ユーザがコンテナ中心になるようにオフセット
-  const offsetX = containerRect.width/2 - userX;
-  const offsetY = containerRect.height/2 - userY;
-
-  lot.style.transformOrigin = "0 0";  // 基準は左上
-  lot.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-
-  requestAnimationFrame(loop);
-})();
+(function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
 
 
 // ===== 開発用簡易コントローラ =====
@@ -362,48 +338,3 @@ document.getElementById("deselect-btn").addEventListener("click", ()=>{
   selectedRod = null;
   renderAll();
 });
-
-// ===== パン（スワイプ移動） =====
-container.addEventListener("mousedown", e=>{
-  isDragging = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
-});
-
-container.addEventListener("mousemove", e=>{
-  if(!isDragging) return;
-
-  const dx = e.clientX - lastX;
-  const dy = e.clientY - lastY;
-
-  offsetX += dx;
-  offsetY += dy;
-
-  lastX = e.clientX;
-  lastY = e.clientY;
-});
-
-container.addEventListener("mouseup", ()=>{ isDragging = false; });
-container.addEventListener("mouseleave", ()=>{ isDragging = false; });
-
-// ===== スマホ対応（タッチ） =====
-container.addEventListener("touchstart", e=>{
-  isDragging = true;
-  lastX = e.touches[0].clientX;
-  lastY = e.touches[0].clientY;
-});
-
-container.addEventListener("touchmove", e=>{
-  if(!isDragging) return;
-
-  const dx = e.touches[0].clientX - lastX;
-  const dy = e.touches[0].clientY - lastY;
-
-  offsetX += dx;
-  offsetY += dy;
-
-  lastX = e.touches[0].clientX;
-  lastY = e.touches[0].clientY;
-});
-
-container.addEventListener("touchend", ()=>{ isDragging = false; });
