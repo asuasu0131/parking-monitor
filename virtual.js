@@ -179,7 +179,7 @@ function renderAll() {
   userMarker.style.top = user.y*scale+"px";
 
   // 仮想ノード生成
-  const allNodes = generateVirtualNodes(nodes,5);
+  const allNodes = generateVirtualNodes(nodes,2);
 
   // 最短経路描画（ゴールはロッドに最も近いノード）
   const emptyRods = rods.filter(r=>r.status===0);
@@ -214,8 +214,8 @@ function renderAll() {
       for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
       pathEl.setAttribute("d",d);
-      pathEl.setAttribute("stroke","#2196f3");
-      pathEl.setAttribute("stroke-width","6");
+      pathEl.setAttribute("stroke","#005aa4ff");
+      pathEl.setAttribute("stroke-width","9");
       pathEl.setAttribute("fill","none");
       pathEl.setAttribute("stroke-linecap","round");
       pathEl.setAttribute("stroke-linejoin","round");
