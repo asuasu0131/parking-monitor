@@ -10,7 +10,7 @@ button { padding:6px 10px; margin:2px; font-size:14px; }
   height: 600px;
   overflow: auto;
   border: 1px solid #888;
-  background: #bfbfbf;
+  background: #FFF8E1;
   cursor: grab;
 }
 
