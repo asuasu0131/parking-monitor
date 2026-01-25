@@ -21,23 +21,28 @@ function latLngToPixel(lat, lng, zoom) {
 }
 
 // ===== 座標変換・背景設定（管理者UIと同じ背景画像に変更） =====
-function setAerialBackground(container, parking) {
+function setAerialBackground() {
+  if (!parking.width || !parking.height) return;
   if (aerialImg) aerialImg.remove();
+
+  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
   aerialImg = document.createElement("img");
   aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
   aerialImg.alt = "Parking Background";
   Object.assign(aerialImg.style, {
     position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
+    left: "0",
+    top: "0",
+    width: parking.width * scale + "px",
+    height: parking.height * scale + "px",
     pointerEvents: "none",
-    zIndex: 0
+    zIndex: 0,
+    objectFit: "cover"
   });
 
-  container.prepend(aerialImg);
+  // 敷地グリッドの下に配置
+ lot.insertBefore(aerialImg, lot.firstChild);
+   lot.style.position = "relative";
 }
 
 // layout_updated イベント受信で再ロード
