@@ -165,15 +165,29 @@ function renderAll() {
 rods.forEach(r=>{
   const d = document.createElement("div");
   d.className="rod " + (r.status===0?"empty":"full");
+
+  // 選択ロッドなら枠を強調
+  if(selectedRod && selectedRod.id === r.id){
+    Object.assign(d.style,{
+      border: "3px solid #f57c00" // オレンジの太枠
+    });
+  } else {
+    Object.assign(d.style,{
+      border: r.status===0 ? "1px solid #555" : "1px solid #999"
+    });
+  }
+
   Object.assign(d.style,{
     left: r.x*scale+"px",
     top: r.y*scale+"px",
     width: (r.width||2.5)*scale+"px",
     height: (r.height||5)*scale+"px",
     transform:`rotate(${r.angle||0}deg)`,
+    background: r.status===0 ? "#8bc34a" : "#9e9e9e",
     zIndex:1,
     cursor:"pointer"
   });
+
   lot.appendChild(d);
 
   // クリックで選択
@@ -184,6 +198,7 @@ rods.forEach(r=>{
     }
   };
 });
+
   // ユーザマーカー
   userMarker.style.left = user.x*scale+"px";
   userMarker.style.top = user.y*scale+"px";
