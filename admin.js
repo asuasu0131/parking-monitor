@@ -99,6 +99,13 @@ function render() {
     };
     updateRod();
 
+// ===== ダブルクリックで満／空を切り替え =====
+   d.ondblclick = e => {
+     e.stopPropagation();
+     r.status = (r.status === 0) ? 1 : 0; // 0:空 ⇄ 1:満
+     render();
+   };
+
     d.onmousedown = e=>{
       e.preventDefault();
       const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
