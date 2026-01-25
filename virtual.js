@@ -201,7 +201,7 @@ function renderAll() {
   });
 
   if(targetNode){
-    const path = findPath(user, {x:targetNode.x, y:targetNode.y}, allNodes);
+    const path = findPath(user, {x:targetNode.x + (r.width || 2.5)/2, y:targetNode.y + (r.height || 5)/2}, allNodes);
     if(path.length>0){
       const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
       svg.id="path-svg";
@@ -215,7 +215,7 @@ function renderAll() {
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
       pathEl.setAttribute("d",d);
       pathEl.setAttribute("stroke","#005aa4ff");
-      pathEl.setAttribute("stroke-width","9");
+      pathEl.setAttribute("stroke-width","11");
       pathEl.setAttribute("fill","none");
       pathEl.setAttribute("stroke-linecap","round");
       pathEl.setAttribute("stroke-linejoin","round");
