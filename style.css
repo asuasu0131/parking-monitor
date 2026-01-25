@@ -44,7 +44,7 @@ h1 {
   z-index: 2;
 }
 .empty { background: #4caf50; }
-.full  { background: #f44336; }
+.full  { background: #ff8a80; }
 
 #user-marker {
   position: absolute;
