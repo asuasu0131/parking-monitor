@@ -7,7 +7,7 @@ let zoomScale = 1;
 let parking = { width: 200, height: 100 };
 // ユーザマーカー初期位置：駐車場右下（少し内側にオフセット）
 let user = { 
-  x: 15,  // 左端から15px内側
+  x: parking.width - 15, // 右端から15px内側
   y:  15  // 左端から15px内側
 };
 const userSpeed = 1;
@@ -100,7 +100,7 @@ async function loadLayout() {
   setAerialBackground();
 
     // マーカー初期位置を右下に設定
-  user.x = 15;
+  user.x = parking.width - 15;
   user.y = 15;
 
   renderAll();
