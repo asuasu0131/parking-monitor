@@ -102,7 +102,7 @@ async function loadLayout() {
     // マーカー初期位置を右下に設定
   user.x = parking.width - 15;
   user.y = parking.height - 15;
-  
+
   renderAll();
 }
 
@@ -294,8 +294,47 @@ loadLayout();
 // ズームループ
 (function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
 
+
 // ===== 開発用簡易コントローラ =====
 document.getElementById("up-btn").addEventListener("click", ()=>{ user.y-=userSpeed; renderAll(); });
 document.getElementById("down-btn").addEventListener("click", ()=>{ user.y+=userSpeed; renderAll(); });
 document.getElementById("left-btn").addEventListener("click", ()=>{ user.x-=userSpeed; renderAll(); });
 document.getElementById("right-btn").addEventListener("click", ()=>{ user.x+=userSpeed; renderAll(); });
+
+// ===== ユーザ移動関数 =====
+function moveUser(dx, dy){
+  user.x += dx;
+  user.y += dy;
+  renderAll();
+}
+
+// ===== 長押し用ハンドラ =====
+function addHoldMove(btnId, dx, dy){
+  let interval = null;
+  const btn = document.getElementById(btnId);
+  
+  const startMove = ()=>{
+    moveUser(dx, dy);
+    interval = setInterval(()=>moveUser(dx, dy), 100); // 0.1秒ごとに移動
+  };
+  const stopMove = ()=>{ if(interval){ clearInterval(interval); interval=null; } };
+  
+  btn.addEventListener("mousedown", startMove);
+  btn.addEventListener("touchstart", startMove);
+  btn.addEventListener("mouseup", stopMove);
+  btn.addEventListener("mouseleave", stopMove);
+  btn.addEventListener("touchend", stopMove);
+  btn.addEventListener("touchcancel", stopMove);
+}
+
+// ===== 長押しで連続移動設定 =====
+addHoldMove("up-btn", 0, -userSpeed);
+addHoldMove("down-btn", 0, userSpeed);
+addHoldMove("left-btn", -userSpeed, 0);
+addHoldMove("right-btn", userSpeed, 0);
+
+// ===== 選択ロッド解除 =====
+document.getElementById("deselect-btn").addEventListener("click", ()=>{
+  selectedRod = null;
+  renderAll();
+});
