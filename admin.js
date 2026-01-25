@@ -50,6 +50,11 @@ function setAerialBackground() {
   lot.style.position = "relative";
 }
 
+if(rods.length === 0){
+  rods.push({id:"R1", x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
+  rods.push({id:"R2", x:parking.width/2, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
+}
+
 // ===== 描画 =====
 function render() {
   lot.querySelectorAll(".rod,.node,.parking-area,.link-line").forEach(e=>e.remove());
@@ -252,6 +257,14 @@ zoomSlider.oninput = ()=>{
   if(aerialImg) aerialImg.style.transform = `scale(${zoomScale})`;
   lot.style.transform = `scale(${zoomScale})`;
 };
+
+socket.on("sensor_update", data => {
+  rods.forEach(r => {
+    if (r.id === "R1") r.status = data.R1;
+    if (r.id === "R2") r.status = data.R2;
+  });
+  render();
+});
 
 // 初期表示
 calcParkingSize();

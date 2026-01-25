@@ -99,6 +99,14 @@ async function loadLayout() {
   renderAll();
 }
 
+socket.on("sensor_update", data => {
+  rods.forEach(r => {
+    if (r.id === "R1") r.status = data.R1;
+    if (r.id === "R2") r.status = data.R2;
+  });
+  renderAll();
+});
+
 // ===== layout_updated イベント受信 =====
 socket.on("layout_updated", async () => {
   console.log("管理者レイアウト更新を受信");
