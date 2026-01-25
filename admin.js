@@ -64,7 +64,7 @@ function render() {
   lot.style.width  = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
-  // ---- 敷地グリッド ----
+// ---- 敷地グリッド（背景画像付き） ----
   const area = document.createElement("div");
   area.className = "parking-area";
   Object.assign(area.style, {
@@ -74,12 +74,16 @@ function render() {
     border: "2px solid #000",
     zIndex:1,
     backgroundImage: `
-      linear-gradient(to right, #aaa 1px, transparent 1px),
-      linear-gradient(to bottom, #aaa 1px, transparent 1px)
+      url(${aerialImg.src}),
+      linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 1px)
     `,
-    backgroundSize: `${GRID_M*scale}px ${GRID_M*scale}px`
+    backgroundSize: `${GRID_M*scale}px ${GRID_M*scale}px, ${GRID_M*scale}px ${GRID_M*scale}px, ${GRID_M*scale}px ${GRID_M*scale}px`,
+    backgroundRepeat: "no-repeat, repeat, repeat",
+    backgroundPosition: "top left, top left, top left",
+    backgroundColor: "transparent"
   });
-  lot.appendChild(area);
++lot.appendChild(area);
 
   // ---- ロッド ----
   rods.forEach(r => {

@@ -29,16 +29,17 @@ function setAerialBackground() {
   aerialImg = document.createElement("img");
   aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
   aerialImg.alt = "Parking Background";
-  Object.assign(aerialImg.style, {
+    Object.assign(aerialImg.style, {
     position: "absolute",
     left: "0",
     top: "0",
     width: parking.width * scale + "px",
     height: parking.height * scale + "px",
     pointerEvents: "none",
-    zIndex: 0,
+    zIndex: -1,  // ←これで敷地の下に配置
     objectFit: "cover"
-  });
+    });
+    lot.insertBefore(aerialImg, lot.firstChild);
 
   // 敷地グリッドの下に配置
  lot.insertBefore(aerialImg, lot.firstChild);
@@ -198,9 +199,9 @@ function renderAll() {
   parkingArea.style.top = "0px";
   parkingArea.style.width = parking.width * scale + "px";
   parkingArea.style.height = parking.height * scale + "px";
-  parkingArea.style.background = "#bfbfbf";
+  parkingArea.style.background = "transparent";
   parkingArea.style.border = "2px solid #000";
-  parkingArea.style.zIndex = 0;
+  parkingArea.style.zIndex = 1;
   lot.appendChild(parkingArea);
 
   // ロッド描画
