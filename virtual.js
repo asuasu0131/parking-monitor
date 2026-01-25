@@ -18,6 +18,13 @@ const socket = io();
 let userMarker = null;
 let aerialImg = null;
 
+let offsetX = 0;
+let offsetY = 0;
+
+let isDragging = false;
+let lastX = 0;
+let lastY = 0;
+
 // ===== 背景設定 =====
 function setAerialBackground() {
   if (!parking.width || !parking.height) return;
@@ -292,7 +299,11 @@ zoomSlider.addEventListener("input",()=>{ zoomScale=parseFloat(zoomSlider.value)
 loadLayout();
 
 // ズームループ
-(function loop(){ lot.style.transform=`scale(${zoomScale})`; requestAnimationFrame(loop); })();
+(function loop(){ 
+    lot.style.transformOrigin = "0 0";
+    lot.style.transform =
+    `translate(${offsetX}px, ${offsetY}px) scale(${zoomScale})`;
+    requestAnimationFrame(loop); })();
 
 
 // ===== 開発用簡易コントローラ =====
@@ -338,3 +349,48 @@ document.getElementById("deselect-btn").addEventListener("click", ()=>{
   selectedRod = null;
   renderAll();
 });
+
+// ===== パン（スワイプ移動） =====
+container.addEventListener("mousedown", e=>{
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+container.addEventListener("mousemove", e=>{
+  if(!isDragging) return;
+
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+
+  offsetX += dx;
+  offsetY += dy;
+
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+container.addEventListener("mouseup", ()=>{ isDragging = false; });
+container.addEventListener("mouseleave", ()=>{ isDragging = false; });
+
+// ===== スマホ対応（タッチ） =====
+container.addEventListener("touchstart", e=>{
+  isDragging = true;
+  lastX = e.touches[0].clientX;
+  lastY = e.touches[0].clientY;
+});
+
+container.addEventListener("touchmove", e=>{
+  if(!isDragging) return;
+
+  const dx = e.touches[0].clientX - lastX;
+  const dy = e.touches[0].clientY - lastY;
+
+  offsetX += dx;
+  offsetY += dy;
+
+  lastX = e.touches[0].clientX;
+  lastY = e.touches[0].clientY;
+});
+
+container.addEventListener("touchend", ()=>{ isDragging = false; });
