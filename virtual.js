@@ -23,28 +23,21 @@ function latLngToPixel(lat, lng, zoom) {
 // ===== 座標変換・背景設定（管理者UIと同じ背景画像に変更） =====
 function setAerialBackground(container, parking) {
   if (aerialImg) aerialImg.remove();
-
   aerialImg = document.createElement("img");
   aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
   aerialImg.alt = "Parking Background";
   Object.assign(aerialImg.style, {
     position: "absolute",
-    left: "50%",
-    top: "50%",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
     pointerEvents: "none",
-    zIndex: 0,
-    display: "block",
-    maxWidth: "none",
-    maxHeight: "none"
+    zIndex: 0
   });
 
-  const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
-  aerialImg.style.width  = parking.width * scale + "px";
-  aerialImg.style.height = parking.height * scale + "px";
-  aerialImg.style.transform = `translate(-50%,-50%) scale(${zoomScale})`;
-
-  lot.prepend(aerialImg);
-  lot.style.position = "relative";
+  container.prepend(aerialImg);
 }
 
 // layout_updated イベント受信で再ロード
