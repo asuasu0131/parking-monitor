@@ -272,13 +272,7 @@ if(targetNode){
     const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
     pathEl.setAttribute("d",d);
     pathEl.setAttribute("stroke","#005aa4ff");
-    pathEl.setAttribute("stroke-width","11");
-
-    // 画面サイズに応じて太さを調整
-  // 例：PCで11px、スマホだとスケールに応じて小さく
-  const baseStroke = 11;  // 基準太さ（PC想定）
-  const adjustedStroke = baseStroke * scale; // scale は renderAll 内で計算済み
-    pathEl.setAttribute("stroke-width", adjustedStroke);
+    pathEl.setAttribute("stroke-width","10");
 
     pathEl.setAttribute("fill","none");
     pathEl.setAttribute("stroke-linecap","round");
