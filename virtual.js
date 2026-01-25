@@ -273,6 +273,13 @@ if(targetNode){
     pathEl.setAttribute("d",d);
     pathEl.setAttribute("stroke","#005aa4ff");
     pathEl.setAttribute("stroke-width","11");
+
+    // 画面サイズに応じて太さを調整
+  // 例：PCで11px、スマホだとスケールに応じて小さく
+  const baseStroke = 11;  // 基準太さ（PC想定）
+  const adjustedStroke = baseStroke * scale; // scale は renderAll 内で計算済み
+    pathEl.setAttribute("stroke-width", adjustedStroke);
+
     pathEl.setAttribute("fill","none");
     pathEl.setAttribute("stroke-linecap","round");
     pathEl.setAttribute("stroke-linejoin","round");
@@ -299,11 +306,23 @@ zoomSlider.addEventListener("input",()=>{ zoomScale=parseFloat(zoomSlider.value)
 loadLayout();
 
 // ズームループ
-(function loop(){ 
-    lot.style.transformOrigin = "0 0";
-    lot.style.transform =
-    `translate(${offsetX}px, ${offsetY}px) scale(${zoomScale})`;
-    requestAnimationFrame(loop); })();
+(function loop() {
+  const scale = zoomScale;
+
+  // ユーザ中心に transform-origin を設定
+  const containerRect = container.getBoundingClientRect();
+  const userX = user.x * scale;
+  const userY = user.y * scale;
+
+  // ユーザがコンテナ中心になるようにオフセット
+  const offsetX = containerRect.width/2 - userX;
+  const offsetY = containerRect.height/2 - userY;
+
+  lot.style.transformOrigin = "0 0";  // 基準は左上
+  lot.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+
+  requestAnimationFrame(loop);
+})();
 
 
 // ===== 開発用簡易コントローラ =====
