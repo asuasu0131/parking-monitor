@@ -270,3 +270,33 @@ socket.on("sensor_update", data => {
 calcParkingSize();
 setAerialBackground();
 render();
+
+document.getElementById("generate-grid").onclick = () => {
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
+
+  // 既存ロッドをクリア（残したい場合はこの行を消す）
+  rods = [];
+
+  let count = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      rods.push({
+        id: "R" + count++,
+        x: startX + c * gapX,
+        y: startY + r * gapY,
+        width: ROD_WIDTH_M,
+        height: ROD_HEIGHT_M,
+        angle: angle,
+        status: 0
+      });
+    }
+  }
+
+  render();
+};
