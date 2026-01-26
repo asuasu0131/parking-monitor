@@ -309,6 +309,32 @@ document.getElementById("resize-selected").onclick = () => {
   render();
 };
 
+// ===== グループ微調整適用 =====
+document.getElementById("apply-group-adjust").onclick = () => {
+  if(!selectedGroupId){ alert("グループを選択してください"); return; }
+
+  const angle = parseFloat(document.getElementById("group-rotate-angle").value);
+  const gapX  = parseFloat(document.getElementById("group-gap-x").value);
+  const gapY  = parseFloat(document.getElementById("group-gap-y").value);
+
+  const groupRods = rods.filter(r => r.groupId === selectedGroupId);
+  if(groupRods.length === 0) return;
+
+  // --- 現在のグループの左上座標を基準に配置 ---
+  let minX = Math.min(...groupRods.map(r => r.x));
+  let minY = Math.min(...groupRods.map(r => r.y));
+
+  groupRods.forEach((r, index) => {
+    const col = index % Math.ceil(Math.sqrt(groupRods.length));
+    const row = Math.floor(index / Math.ceil(Math.sqrt(groupRods.length)));
+    r.x = minX + col * gapX;
+    r.y = minY + row * gapY;
+    r.angle = angle;
+  });
+
+  render();
+};
+
 document.getElementById("delete-selected").onclick = () => {
   if(!selectedRod){ alert("ロッドを選択してください"); return; }
   rods = rods.filter(r=>r.id!==selectedRod.id);
