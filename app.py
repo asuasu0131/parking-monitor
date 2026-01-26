@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
-from flask import Flask, request, send_from_directory, send_file
+from flask import Flask, request, send_from_directory, send_file, jsonify
 from flask_socketio import SocketIO
 from flask_cors import CORS
 import os, json
@@ -10,6 +10,13 @@ app = Flask(__name__)
 CORS(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
+LAYOUT_FILE = "parking_layout.json"
+
+# 初期JSONがなければ作る
+if not os.path.exists(LAYOUT_FILE):
+    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f, ensure_ascii=False, indent=2)
 
 # ===== HTML =====
 @app.route("/")
@@ -31,22 +38,44 @@ def static_files(filename):
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
-    with open("parking_layout.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    if not data or "parking" not in data:
+        return jsonify({"status":"error","message":"Invalid data"}), 400
 
-    socketio.emit("layout_updated")
-    return {"status": "ok"}
+    try:
+        # 既存の全駐車場読み込み
+        with open(LAYOUT_FILE, "r", encoding="utf-8") as f:
+            all_layouts = json.load(f)
 
-# ===== JSON 取得 =====
+        # 今回送信された駐車場ID
+        parking_id = data.get("parking", {}).get("id") or data.get("id") or f"P{len(all_layouts)+1}"
+        all_layouts[parking_id] = data
+
+        with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
+            json.dump(all_layouts, f, ensure_ascii=False, indent=2)
+
+        socketio.emit("layout_updated")  # 仮想画面へ通知
+        return jsonify({"status":"ok","parking_id":parking_id})
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+
+# ===== 全駐車場取得 =====
+@app.route("/get_layouts", methods=["GET"])
+def get_layouts():
+    with open(LAYOUT_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return jsonify(data)
+
+# ===== 個別JSON取得（従来互換） =====
 @app.route("/parking_layout.json")
 def get_layout():
-    return send_file("parking_layout.json")
+    return send_file(LAYOUT_FILE)
 
+# ===== 駐車センサー更新 =====
 @app.route("/update_sensor", methods=["POST"])
 def update_sensor():
     data = request.get_json()  # 例: {"R1":0,"R2":1}
     socketio.emit("sensor_update", data)  # UIにリアルタイム送信
-    return {"status": "ok"}
+    return jsonify({"status":"ok"})
 
 # ===== SocketIO イベント =====
 @socketio.on("layout_updated")
