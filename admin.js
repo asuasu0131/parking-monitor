@@ -2,10 +2,9 @@ const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
 const zoomSlider = document.getElementById("zoom-slider");
 
-const groupId = "G" + Date.now(); //自動グループID
-
 const socket = io();
 let zoomScale = 1;
+let selectedRod = null;
 
 // ===== 現実サイズ =====
 const ROD_WIDTH_M  = 2.5;
@@ -52,6 +51,7 @@ function setAerialBackground() {
   lot.style.position = "relative";
 }
 
+// 初期ロッド
 if(rods.length === 0){
   rods.push({id:"R1", x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
   rods.push({id:"R2", x:parking.width/2, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
@@ -62,7 +62,6 @@ function render() {
   lot.querySelectorAll(".rod,.node,.parking-area,.link-line").forEach(e=>e.remove());
 
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
-
   lot.style.width  = parking.width * scale + "px";
   lot.style.height = parking.height * scale + "px";
 
@@ -101,18 +100,28 @@ function render() {
         top:  r.y * scale + "px",
         width: r.width * scale + "px",
         height:r.height* scale + "px",
-        transform:`rotate(${r.angle}deg)`
+        transform:`rotate(${r.angle}deg)`,
+        cursor:"move",
+        textAlign:"center",
+        lineHeight:r.height*scale+"px"
       });
     };
     updateRod();
 
-// ===== ダブルクリックで満／空を切り替え =====
-   d.ondblclick = e => {
-     e.stopPropagation();
-     r.status = (r.status === 0) ? 1 : 0; // 0:空 ⇄ 1:満
-     render();
-   };
+    // 選択
+    d.onclick = e => {
+      e.stopPropagation();
+      selectedRod = r;
+    };
 
+    // ダブルクリックで満／空切替
+    d.ondblclick = e => {
+      e.stopPropagation();
+      r.status = (r.status === 0) ? 1 : 0;
+      render();
+    };
+
+    // ドラッグ
     d.onmousedown = e=>{
       e.preventDefault();
       const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
@@ -126,6 +135,7 @@ function render() {
       document.addEventListener("mouseup",up);
     };
 
+    // 右クリックで回転
     d.oncontextmenu = e=>{
       e.preventDefault();
       r.angle = (r.angle+90)%360;
@@ -147,11 +157,17 @@ function render() {
         left: (n.x*scale - size/2)+"px",
         top:  (n.y*scale - size/2)+"px",
         width:size+"px",
-        height:size+"px"
+        height:size+"px",
+        borderRadius:"50%",
+        backgroundColor:"#0f0",
+        textAlign:"center",
+        lineHeight:size+"px",
+        cursor:"move"
       });
     };
     updateNode();
 
+    // ノードリンク作成
     d.onclick = e=>{
       if(e.shiftKey){
         if(!selectedNodeForLink){
@@ -168,6 +184,7 @@ function render() {
       }
     };
 
+    // ドラッグ
     d.onmousedown = e=>{
       e.preventDefault();
       const sx=e.clientX, sy=e.clientY, ox=n.x, oy=n.y;
@@ -204,7 +221,7 @@ function render() {
       top:y1+"px",
       width:length+"px",
       height:"3px",
-      background:"#0000ff",
+      background:"#00f",
       transform:`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`,
       transformOrigin:"0 0",
       zIndex:2,
@@ -223,7 +240,9 @@ function render() {
   });
 }
 
-// ===== イベント =====
+// ===== UIイベント =====
+
+// 駐車場設定
 document.getElementById("set-parking").onclick = ()=>{
   parking.lat1 = +lat1.value;
   parking.lng1 = +lng1.value;
@@ -234,6 +253,7 @@ document.getElementById("set-parking").onclick = ()=>{
   render();
 };
 
+// 単体ロッド追加
 document.getElementById("add-rod").onclick = ()=>{
   rods.push({
     id:"R"+(rods.length+1),
@@ -243,109 +263,18 @@ document.getElementById("add-rod").onclick = ()=>{
     height:ROD_HEIGHT_M,
     status:0,
     angle:0,
-    groupId: null
+    groupId:null
   });
   render();
 };
 
-// ===== ロッドグループ一括移動 =====
-function moveRodGroup(groupId, dx, dy){
-  rods.forEach(r=>{
-    if(r.groupId === groupId){
-      r.x += dx;
-      r.y += dy;
-    }
-  });
-  render();
-}
-
-// ===== ロッドグループ一括回転 =====
-function rotateRodGroup(groupId, angle){
-  rods.forEach(r=>{
-    if(r.groupId === groupId){
-      r.angle = angle;
-    }
-  });
-  render();
-}
-
-// ロッド削除（単体）
-function deleteRod(rodId){
-  rods = rods.filter(r => r.id !== rodId);
-  render();
-}
-
-// ロッドグループ削除
-function deleteRodGroup(groupId){
-  rods = rods.filter(r => r.groupId !== groupId);
-  render();
-}
-
-// ロッドサイズ変更（単体）
-function resizeRod(rodId, newWidth, newHeight){
-  const rod = rods.find(r => r.id === rodId);
-  if(rod){
-    rod.width = newWidth;
-    rod.height = newHeight;
-    render();
-  }
-}
-
-// ロッドサイズ変更（グループ）
-function resizeRodGroup(groupId, newWidth, newHeight){
-  rods.forEach(r=>{
-    if(r.groupId === groupId){
-      r.width = newWidth;
-      r.height = newHeight;
-    }
-  });
-  render();
-}
-
-// 選択ロッド削除
-function deleteSelectedRod(){
-  if(selectedRod){
-    deleteRod(selectedRod.id);
-    selectedRod = null;
-  }
-}
-
-// 選択ロッドサイズ変更
-function resizeSelectedRod(width, height){
-  if(selectedRod){
-    selectedRod.width = width;
-    selectedRod.height = height;
-    render();
-  }
-}
-
-// ===== ロッド整列配置（グループ対応）=====
-function addRodGrid(startX, startY, rows, cols, gapX, gapY, angle=0){
-  const groupId = "G" + Date.now();
-
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      rods.push({
-        id:"R"+(rods.length+1),
-        x:startX + c*gapX,
-        y:startY + r*gapY,
-        width:ROD_WIDTH_M,
-        height:ROD_HEIGHT_M,
-        angle,
-        status:0,
-        groupId
-      });
-    }
-  }
-  render();
-}
-
-
+// ノード追加
 document.getElementById("add-node").onclick = ()=>{
   nodes.push({id:"N"+(nodes.length+1), x:parking.width/2, y:parking.height/2, radius:1.0, neighbors:[]});
   render();
 };
 
+// 保存
 document.getElementById("save-layout").onclick = async ()=>{
   try{
     const layout = {parking, rods, nodes, links};
@@ -356,112 +285,84 @@ document.getElementById("save-layout").onclick = async ()=>{
   }catch(e){ console.error(e); alert("保存エラー"); }
 };
 
+// ズーム
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);
   if(aerialImg) aerialImg.style.transform = `scale(${zoomScale})`;
   lot.style.transform = `scale(${zoomScale})`;
 };
 
+// センサー更新
 socket.on("sensor_update", data => {
   rods.forEach(r => {
-    if (r.id === "R1") r.status = data.R1;
-    if (r.id === "R2") r.status = data.R2;
+    if (r.id in data) r.status = data[r.id];
   });
   render();
 });
 
-// 初期表示
-calcParkingSize();
-setAerialBackground();
-render();
+// ===== ロッド操作関数 =====
+function deleteRod(rodId){ rods = rods.filter(r=>r.id!==rodId); render(); }
+function deleteRodGroup(groupId){ rods = rods.filter(r=>r.groupId!==groupId); render(); }
+function resizeRod(rodId,w,h){ const r=rods.find(r=>r.id===rodId); if(r){ r.width=w;r.height=h; render(); } }
+function resizeRodGroup(groupId,w,h){ rods.forEach(r=>{ if(r.groupId===groupId){r.width=w;r.height=h;} }); render(); }
+function deleteSelectedRod(){ if(selectedRod){ deleteRod(selectedRod.id); selectedRod=null; } }
+function resizeSelectedRod(w,h){ if(selectedRod){ selectedRod.width=w; selectedRod.height=h; render(); } }
 
-document.getElementById("generate-grid").onclick = () => {
-  const startX = +document.getElementById("grid-start-x").value;
-  const startY = +document.getElementById("grid-start-y").value;
-  const cols   = +document.getElementById("grid-cols").value;
-  const rows   = +document.getElementById("grid-rows").value;
-  const gapX   = +document.getElementById("grid-gap-x").value;
-  const gapY   = +document.getElementById("grid-gap-y").value;
-  const angle  = +document.getElementById("grid-angle").value;
-
-document.getElementById("generate-grid").onclick = () => {
-  const startX = +document.getElementById("grid-start-x").value;
-  const startY = +document.getElementById("grid-start-y").value;
-  const cols   = +document.getElementById("grid-cols").value;
-  const rows   = +document.getElementById("grid-rows").value;
-  const gapX   = +document.getElementById("grid-gap-x").value;
-  const gapY   = +document.getElementById("grid-gap-y").value;
-  const angle  = +document.getElementById("grid-angle").value;
-
-  // 選択ロッドサイズ変更
-document.getElementById("resize-selected").onclick = () => {
-  if (!selectedRod) { alert("ロッドを選択してください"); return; }
-  const w = parseFloat(document.getElementById("selected-width").value);
-  const h = parseFloat(document.getElementById("selected-height").value);
-  selectedRod.width = w;
-  selectedRod.height = h;
-  render();
-};
-
-// 選択ロッド削除
-document.getElementById("delete-selected").onclick = () => {
-  if (!selectedRod) { alert("ロッドを選択してください"); return; }
-  rods = rods.filter(r => r.id !== selectedRod.id);
-  selectedRod = null;
-  render();
-};
-
-// グループサイズ変更
-document.getElementById("resize-group").onclick = () => {
-  const gid = document.getElementById("group-id").value;
-  if (!gid) { alert("グループIDを入力してください"); return; }
-  const w = parseFloat(document.getElementById("group-width").value);
-  const h = parseFloat(document.getElementById("group-height").value);
-  rods.forEach(r => { if (r.groupId === gid) { r.width = w; r.height = h; } });
-  render();
-};
-
-// グループ削除
-document.getElementById("delete-group").onclick = () => {
-  const gid = document.getElementById("group-id").value;
-  if (!gid) { alert("グループIDを入力してください"); return; }
-  rods = rods.filter(r => r.groupId !== gid);
-  render();
-};
-
-  let selectedRods = rods.filter(r => r.selected); // 選択フラグをつける
-  if(selectedRods.length === 0) selectedRods = rods; // 選択なしなら全て
-
-  let count = 1;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const rod = selectedRods.shift();
-      if(!rod) break;
-      rod.x = startX + c * gapX;
-      rod.y = startY + r * gapY;
-      rod.angle = angle;
-      rod.id = "R" + count++; // 必要ならID更新
-    }
-  }
-
-  render();
-};
-
-  let count = 1;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+// ===== ロッドグリッド整列生成 =====
+function addRodGridUI(startX, startY, rows, cols, gapX, gapY, angle=0){
+  const groupId = "G"+Date.now();
+  let count = rods.length + 1;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
       rods.push({
-        id: "R" + count++,
-        x: startX + c * gapX,
-        y: startY + r * gapY,
-        width: ROD_WIDTH_M,
-        height: ROD_HEIGHT_M,
-        angle: angle,
-        status: 0,
+        id:"R"+count++,
+        x:startX+c*gapX,
+        y:startY+r*gapY,
+        width:ROD_WIDTH_M,
+        height:ROD_HEIGHT_M,
+        angle,
+        status:0,
         groupId
       });
     }
   }
-
+  document.getElementById("group-id").value = groupId;
   render();
+}
+
+// グリッド生成ボタン
+document.getElementById("generate-grid").onclick = ()=>{
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
+  addRodGridUI(startX,startY,rows,cols,gapX,gapY,angle);
 };
+
+// 選択ロッド操作
+document.getElementById("resize-selected").onclick = ()=>{
+  const w = parseFloat(document.getElementById("selected-width").value);
+  const h = parseFloat(document.getElementById("selected-height").value);
+  resizeSelectedRod(w,h);
+};
+document.getElementById("delete-selected").onclick = ()=>{ deleteSelectedRod(); };
+
+// グループ操作
+document.getElementById("resize-group").onclick = ()=>{
+  const gid = document.getElementById("group-id").value;
+  const w = parseFloat(document.getElementById("group-width").value);
+  const h = parseFloat(document.getElementById("group-height").value);
+  resizeRodGroup(gid,w,h);
+};
+document.getElementById("delete-group").onclick = ()=>{
+  const gid = document.getElementById("group-id").value;
+  deleteRodGroup(gid);
+};
+
+// ===== 初期表示 =====
+calcParkingSize();
+setAerialBackground();
+render();
