@@ -280,8 +280,32 @@ document.getElementById("generate-grid").onclick = () => {
   const gapY   = +document.getElementById("grid-gap-y").value;
   const angle  = +document.getElementById("grid-angle").value;
 
-  // 既存ロッドをクリア（残したい場合はこの行を消す）
-  rods = [];
+document.getElementById("generate-grid").onclick = () => {
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
+
+  let selectedRods = rods.filter(r => r.selected); // 選択フラグをつける
+  if(selectedRods.length === 0) selectedRods = rods; // 選択なしなら全て
+
+  let count = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const rod = selectedRods.shift();
+      if(!rod) break;
+      rod.x = startX + c * gapX;
+      rod.y = startY + r * gapY;
+      rod.angle = angle;
+      rod.id = "R" + count++; // 必要ならID更新
+    }
+  }
+
+  render();
+};
 
   let count = 1;
   for (let r = 0; r < rows; r++) {

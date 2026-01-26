@@ -42,6 +42,12 @@ def save_layout():
 def get_layout():
     return send_file("parking_layout.json")
 
+@app.route("/update_sensor", methods=["POST"])
+def update_sensor():
+    data = request.get_json()  # 例: {"R1":0,"R2":1}
+    socketio.emit("sensor_update", data)  # UIにリアルタイム送信
+    return {"status": "ok"}
+
 # ===== SocketIO イベント =====
 @socketio.on("layout_updated")
 def on_layout_updated():
