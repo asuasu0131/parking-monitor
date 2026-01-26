@@ -310,27 +310,53 @@ document.getElementById("resize-selected").onclick = () => {
 };
 
 // ===== グループ微調整適用 =====
+// ===== グループ微調整適用（修正版） =====
 document.getElementById("apply-group-adjust").onclick = () => {
   if(!selectedGroupId){ alert("グループを選択してください"); return; }
 
-  const angle = parseFloat(document.getElementById("group-rotate-angle").value);
-  const gapX  = parseFloat(document.getElementById("group-gap-x").value);
-  const gapY  = parseFloat(document.getElementById("group-gap-y").value);
+  const angleDeg = parseFloat(document.getElementById("group-rotate-angle").value);
+  const angleRad = angleDeg * Math.PI / 180;
+  const gapX = parseFloat(document.getElementById("group-gap-x").value);
+  const gapY = parseFloat(document.getElementById("group-gap-y").value);
 
   const groupRods = rods.filter(r => r.groupId === selectedGroupId);
   if(groupRods.length === 0) return;
 
-  // --- 現在のグループの左上座標を基準に配置 ---
-  let minX = Math.min(...groupRods.map(r => r.x));
-  let minY = Math.min(...groupRods.map(r => r.y));
+  // --- グループ重心を計算 ---
+  const cx = groupRods.reduce((sum, r) => sum + r.x, 0) / groupRods.length;
+  const cy = groupRods.reduce((sum, r) => sum + r.y, 0) / groupRods.length;
 
-  groupRods.forEach((r, index) => {
-    const col = index % Math.ceil(Math.sqrt(groupRods.length));
-    const row = Math.floor(index / Math.ceil(Math.sqrt(groupRods.length)));
-    r.x = minX + col * gapX;
-    r.y = minY + row * gapY;
-    r.angle = angle;
+  groupRods.forEach(r => {
+    // --- グループ内での相対位置を保持 ---
+    let dx = r.x - cx;
+    let dy = r.y - cy;
+
+    // --- 回転 ---
+    const newX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+    const newY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+
+    r.x = cx + newX;
+    r.y = cy + newY;
+
+    // --- ロッド自体の角度も加算 ---
+    r.angle = (r.angle + angleDeg) % 360;
   });
+
+  // --- 横間隔・縦間隔微調整 ---
+  if(!isNaN(gapX) && !isNaN(gapY)){
+    // グループ内の相対位置にgapを掛ける
+    const xs = groupRods.map(r => r.x);
+    const ys = groupRods.map(r => r.y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+
+    groupRods.forEach((r, i) => {
+      const relX = r.x - minX;
+      const relY = r.y - minY;
+      r.x = minX + relX + gapX * (i % groupRods.length);
+      r.y = minY + relY + gapY * Math.floor(i / groupRods.length);
+    });
+  }
 
   render();
 };
