@@ -99,23 +99,6 @@ async function loadLayout() {
   renderAll();
 }
 
-// 管理者がレイアウト更新したとき
-socket.on("layout_updated", (data) => {
-  console.log("管理者レイアウト更新を受信");
-
-  if (data.parking) parking = data.parking;
-  if (data.rods) rods = data.rods;
-  if (data.nodes) nodes = data.nodes;
-  if (data.links) links = data.links;
-
-  // ユーザ座標を更新（必要に応じて）
-  user.x = Math.min(user.x, parking.width);
-  user.y = Math.min(user.y, parking.height);
-
-  setAerialBackground();
-  renderAll();
-});
-
 // ===== layout_updated イベント受信 =====
 socket.on("layout_updated", async () => {
   console.log("管理者レイアウト更新を受信");
@@ -197,7 +180,7 @@ function renderAll() {
       width: (r.width||2.5)*scale+"px",
       height: (r.height||5)*scale+"px",
       transform:`rotate(${r.angle||0}deg)`,
-      background: r.status===0 ? "#88ff00ff" : "#ff0000ff",
+      background: r.status===0 ? "#8bc34a" : "#9e9e9e",
       zIndex:1,
       cursor:"pointer"
     });
