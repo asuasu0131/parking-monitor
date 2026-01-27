@@ -16,8 +16,6 @@ let rods = [];
 let nodes = [];
 let links = [];
 let selectedNodeForLink = null;
-let selectedRod = null;
-let selectedGroupId = null;
 
 // ===== 背景画像 =====
 let aerialImg = null;
@@ -52,10 +50,9 @@ function setAerialBackground() {
   lot.style.position = "relative";
 }
 
-// 初期ロッド
 if(rods.length === 0){
-  rods.push({id:"R1", x:10, y:10, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0, groupId:null});
-  rods.push({id:"R2", x:20, y:10, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0, groupId:null});
+  rods.push({id:"R1", x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
+  rods.push({id:"R2", x:parking.width/2, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
 }
 
 // ===== 描画 =====
@@ -102,56 +99,35 @@ function render() {
         top:  r.y * scale + "px",
         width: r.width * scale + "px",
         height:r.height* scale + "px",
-        transform:`rotate(${r.angle}deg)`,
-        border: (r.groupId===selectedGroupId)?"2px dashed red":""
+        transform:`rotate(${r.angle}deg)`
       });
     };
     updateRod();
 
-    // ダブルクリックで満/空切替
-    d.ondblclick = e => {
-      e.stopPropagation();
-      r.status = (r.status === 0) ? 1 : 0;
-      render();
-    };
+// ===== ダブルクリックで満／空を切り替え =====
+   d.ondblclick = e => {
+     e.stopPropagation();
+     r.status = (r.status === 0) ? 1 : 0; // 0:空 ⇄ 1:満
+     render();
+   };
 
-    // 単体ドラッグ or グループドラッグ
     d.onmousedown = e=>{
       e.preventDefault();
-      const sx=e.clientX, sy=e.clientY;
-      let targets = [];
-      if(selectedGroupId && r.groupId===selectedGroupId){
-        targets = rods.filter(x=>x.groupId===selectedGroupId);
-      } else {
-        targets = [r];
-        selectedRod = r;
-        selectedGroupId = null;
-      }
-      const offsets = targets.map(t=>({x:t.x, y:t.y}));
+      const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
       const move = ev=>{
-        const dx = (ev.clientX - sx)/scale;
-        const dy = (ev.clientY - sy)/scale;
-        targets.forEach((t,i)=>{
-          t.x = offsets[i].x + dx;
-          t.y = offsets[i].y + dy;
-        });
-        render();
+        r.x = ox + (ev.clientX - sx)/scale;
+        r.y = oy + (ev.clientY - sy)/scale;
+        updateRod();
       };
       const up = ()=>{ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); };
       document.addEventListener("mousemove",move);
       document.addEventListener("mouseup",up);
     };
 
-    // 右クリックで角度変更 or グループ選択
     d.oncontextmenu = e=>{
       e.preventDefault();
-      if(e.shiftKey && r.groupId){
-        selectedGroupId = r.groupId;
-        selectedRod = null;
-      } else {
-        r.angle = (r.angle+90)%360;
-      }
-      render();
+      r.angle = (r.angle+90)%360;
+      updateRod();
     };
   });
 
@@ -257,16 +233,7 @@ document.getElementById("set-parking").onclick = ()=>{
 };
 
 document.getElementById("add-rod").onclick = ()=>{
-  rods.push({
-    id:"R"+(rods.length+1),
-    x:parking.width/4,
-    y:parking.height/4,
-    width:ROD_WIDTH_M,
-    height:ROD_HEIGHT_M,
-    status:0,
-    angle:0,
-    groupId: null
-  });
+  rods.push({id:"R"+(rods.length+1), x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
   render();
 };
 
@@ -299,120 +266,61 @@ socket.on("sensor_update", data => {
   render();
 });
 
-// ===== 選択・削除・サイズ変更ボタン =====
-document.getElementById("resize-selected").onclick = () => {
-  if(!selectedRod){ alert("ロッドを選択してください"); return; }
-  const w = parseFloat(document.getElementById("selected-width").value);
-  const h = parseFloat(document.getElementById("selected-height").value);
-  selectedRod.width = w;
-  selectedRod.height = h;
-  render();
-};
-
-// ===== グループ微調整適用 =====
-// ===== グループ微調整適用（修正版） =====
-document.getElementById("apply-group-adjust").onclick = () => {
-  if(!selectedGroupId){ alert("グループを選択してください"); return; }
-
-  const angleDeg = parseFloat(document.getElementById("group-rotate-angle").value);
-  const angleRad = angleDeg * Math.PI / 180;
-  const gapX = parseFloat(document.getElementById("group-gap-x").value);
-  const gapY = parseFloat(document.getElementById("group-gap-y").value);
-
-  const groupRods = rods.filter(r => r.groupId === selectedGroupId);
-  if(groupRods.length === 0) return;
-
-  // --- グループ重心を計算 ---
-  const cx = groupRods.reduce((sum, r) => sum + r.x, 0) / groupRods.length;
-  const cy = groupRods.reduce((sum, r) => sum + r.y, 0) / groupRods.length;
-
-  groupRods.forEach(r => {
-    // --- グループ内での相対位置を保持 ---
-    let dx = r.x - cx;
-    let dy = r.y - cy;
-
-    // --- 回転 ---
-    const newX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-    const newY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-
-    r.x = cx + newX;
-    r.y = cy + newY;
-
-    // --- ロッド自体の角度も加算 ---
-    r.angle = (r.angle + angleDeg) % 360;
-  });
-
-  // --- 横間隔・縦間隔微調整 ---
-  if(!isNaN(gapX) && !isNaN(gapY)){
-    // グループ内の相対位置にgapを掛ける
-    const xs = groupRods.map(r => r.x);
-    const ys = groupRods.map(r => r.y);
-    const minX = Math.min(...xs);
-    const minY = Math.min(...ys);
-
-    groupRods.forEach((r, i) => {
-      const relX = r.x - minX;
-      const relY = r.y - minY;
-      r.x = minX + relX + gapX * (i % groupRods.length);
-      r.y = minY + relY + gapY * Math.floor(i / groupRods.length);
-    });
-  }
-
-  render();
-};
-
-document.getElementById("delete-selected").onclick = () => {
-  if(!selectedRod){ alert("ロッドを選択してください"); return; }
-  rods = rods.filter(r=>r.id!==selectedRod.id);
-  selectedRod = null;
-  render();
-};
-
-document.getElementById("resize-group").onclick = () => {
-  if(!selectedGroupId){ alert("グループを選択してください"); return; }
-  const w = parseFloat(document.getElementById("group-width").value);
-  const h = parseFloat(document.getElementById("group-height").value);
-  rods.filter(r=>r.groupId===selectedGroupId).forEach(r=>{r.width=w; r.height=h;});
-  render();
-};
-
-document.getElementById("delete-group").onclick = () => {
-  if(!selectedGroupId){ alert("グループを選択してください"); return; }
-  rods = rods.filter(r=>r.groupId!==selectedGroupId);
-  selectedGroupId = null;
-  render();
-};
-
-// ===== ロッド整列配置（グループ作成）=====
-document.getElementById("generate-grid").onclick = () => {
-  const startX = 0, startY = 0;
-  const cols = +document.getElementById("grid-cols").value;
-  const rows = +document.getElementById("grid-rows").value;
-  const gapX = +document.getElementById("grid-gap-x").value;
-  const gapY = +document.getElementById("grid-gap-y").value;
-  const angle = +document.getElementById("grid-angle").value;
-  const groupId = "G"+Date.now();
-
-  let count = rods.length+1;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      rods.push({
-        id:"R"+count++,
-        x:startX + c*gapX,
-        y:startY + r*gapY,
-        width:ROD_WIDTH_M,
-        height:ROD_HEIGHT_M,
-        angle: angle,
-        status:0,
-        groupId
-      });
-    }
-  }
-  selectedGroupId = groupId;
-  render();
-};
-
 // 初期表示
 calcParkingSize();
 setAerialBackground();
 render();
+
+document.getElementById("generate-grid").onclick = () => {
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
+
+document.getElementById("generate-grid").onclick = () => {
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
+
+  let selectedRods = rods.filter(r => r.selected); // 選択フラグをつける
+  if(selectedRods.length === 0) selectedRods = rods; // 選択なしなら全て
+
+  let count = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const rod = selectedRods.shift();
+      if(!rod) break;
+      rod.x = startX + c * gapX;
+      rod.y = startY + r * gapY;
+      rod.angle = angle;
+      rod.id = "R" + count++; // 必要ならID更新
+    }
+  }
+
+  render();
+};
+
+  let count = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      rods.push({
+        id: "R" + count++,
+        x: startX + c * gapX,
+        y: startY + r * gapY,
+        width: ROD_WIDTH_M,
+        height: ROD_HEIGHT_M,
+        angle: angle,
+        status: 0
+      });
+    }
+  }
+
+  render();
+};
