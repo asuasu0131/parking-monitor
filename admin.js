@@ -1,4 +1,4 @@
-// ===== admin.js 完全版 =====
+// ===== admin.js 完全版（ノード可視化対応済み） =====
 const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
 const zoomSlider = document.getElementById("zoom-slider");
@@ -110,17 +110,22 @@ function render() {
   rods.forEach(r=>{
     const d = document.createElement("div");
     d.className = "rod " + (r.status===0?"empty":"full");
-    d.textContent = r.id;
+    d.textContent=r.id;
     d.style.zIndex = 2;
     if (r.selected) d.style.outline = "3px solid yellow";
     lot.appendChild(d);
 
     Object.assign(d.style,{
+      position:"absolute",
       left:r.x*scale+"px",
       top:r.y*scale+"px",
       width:r.width*scale+"px",
       height:r.height*scale+"px",
-      transform:`rotate(${r.angle||0}deg)`
+      transform:`rotate(${r.angle||0}deg)`,
+      background: r.status===0?"#8bc34a":"#9e9e9e",
+      border: r.selected?"3px solid #f57c00":"1px solid #555",
+      cursor:"pointer",
+      boxSizing:"border-box"
     });
 
     // ダブルクリック：満空切替
@@ -167,42 +172,43 @@ function render() {
     };
   });
 
-  // ---- ノード & 線 ----
+  // ---- ノード ----
   nodes.forEach(n=>{
-  const d=document.createElement("div");
-  d.className="node";
-  d.textContent=n.id;
-  d.style.zIndex=3;
-  lot.appendChild(d);
+    const d=document.createElement("div");
+    d.className="node";
+    d.textContent=n.id;
+    d.style.zIndex=3;
+    lot.appendChild(d);
 
-  const size = (n.radius || 1) * 2 * scale;  // radius未設定時も1にする
+    const size = (n.radius || 1) * 2 * scale;
 
-  Object.assign(d.style,{
-    position: "absolute",           // ←絶対配置必須
-    left: (n.x*scale - size/2) + "px",
-    top:  (n.y*scale - size/2) + "px",
-    width: size + "px",
-    height: size + "px",
-    background: "#ff5722",          // ←目立つ色
-    border: "2px solid #000",       // ←輪郭
-    borderRadius: "50%",            // ←丸にする
-    display: "flex",                // ←ID文字中央配置
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#fff",
-    fontSize: Math.max(10*scale,8)+"px",
-    boxSizing: "border-box",
-    cursor: "pointer"
+    Object.assign(d.style,{
+      position:"absolute",
+      left:(n.x*scale-size/2)+"px",
+      top:(n.y*scale-size/2)+"px",
+      width:size+"px",
+      height:size+"px",
+      background:"#ff5722",
+      border:"2px solid #000",
+      borderRadius:"50%",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"center",
+      color:"#fff",
+      fontSize: Math.max(10*scale,8)+"px",
+      cursor:"pointer",
+      boxSizing:"border-box"
+    });
+
+    // ノードクリックで選択
+    d.onclick = e=>{
+      e.stopPropagation();
+      selectedNodeForLink = n;
+      render();
+    };
   });
 
-  // ノードクリックで選択
-  d.onclick = e=>{
-    e.stopPropagation();
-    selectedNodeForLink = n;
-    render();
-  };
-});
-
+  // ---- ノード間リンク ----
   links.forEach((l,i)=>{
     const a=nodes.find(x=>x.id===l.from);
     const b=nodes.find(x=>x.id===l.to);
@@ -219,7 +225,9 @@ function render() {
       height:"3px",
       background:"#00f",
       transform:`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`,
-      transformOrigin:"0 0"
+      transformOrigin:"0 0",
+      zIndex:2,
+      cursor:"pointer"
     });
     line.onclick=e=>{
       if(e.ctrlKey){
