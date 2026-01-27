@@ -85,24 +85,35 @@ function render() {
   });
   lot.appendChild(area);
 
-  // ---- ロッド ----
-  rods.forEach(r => {
-    const d = document.createElement("div");
-    d.className = "rod " + (r.status===0 ? "empty" : "full");
-    d.textContent = r.id;
-    d.style.zIndex = 2;
-    lot.appendChild(d);
+// ---- ロッド ----
+rods.forEach(r => {
+  const d = document.createElement("div");
+  d.className = "rod " + (r.status===0 ? "empty" : "full");
+  d.textContent = r.id;
+  d.style.zIndex = 2;
 
-    const updateRod = ()=>{
-      Object.assign(d.style, {
-        left: r.x * scale + "px",
-        top:  r.y * scale + "px",
-        width: r.width * scale + "px",
-        height:r.height* scale + "px",
-        transform:`rotate(${r.angle}deg)`
-      });
-    };
-    updateRod();
+  // 選択中なら黄色枠を追加
+  if(r.selected){
+    d.style.outline = "3px solid yellow";
+  }
+
+  lot.appendChild(d);
+
+  const updateRod = ()=>{
+    Object.assign(d.style, {
+      left: r.x * scale + "px",
+      top:  r.y * scale + "px",
+      width: r.width * scale + "px",
+      height:r.height* scale + "px",
+      transform:`rotate(${r.angle}deg)`
+    });
+
+    // 選択中の枠は常に反映
+    d.style.outline = r.selected ? "3px solid yellow" : "";
+  };
+  updateRod();
+
+  // 以下、既存のダブルクリック、ドラッグ、右クリック処理は変更なし
 
 // ===== ダブルクリックで満／空を切り替え =====
    d.ondblclick = e => {
@@ -110,6 +121,17 @@ function render() {
      r.status = (r.status === 0) ? 1 : 0; // 0:空 ⇄ 1:満
      render();
    };
+
+   d.onclick = e=>{
+  e.stopPropagation();
+  if(e.shiftKey && r.groupId){  // Shift押しながらクリック
+    rods.forEach(x => x.selected = x.groupId === r.groupId);
+  }else{
+    rods.forEach(x => x.selected = false); // 全て非選択
+    r.selected = true; // このロッドだけ選択
+  }
+  render(); // 選択状態を描画に反映
+};
 
     d.onmousedown = e=>{
       e.preventDefault();
