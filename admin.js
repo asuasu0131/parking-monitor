@@ -85,59 +85,85 @@ function render() {
   });
   lot.appendChild(area);
 
-// ---- ロッド ----
-rods.forEach(r => {
-  const d = document.createElement("div");
-  d.className = "rod " + (r.status===0 ? "empty" : "full");
-  d.textContent = r.id;
-  d.style.zIndex = 2;
+  // ---- ロッド ----
+  rods.forEach(r => {
+    const d = document.createElement("div");
+    d.className = "rod " + (r.status===0 ? "empty" : "full");
+    d.textContent = r.id;
+    d.style.zIndex = 2;
 
-  // 選択中なら黄色枠を追加
-  if(r.selected){
-    d.style.outline = "3px solid yellow";
-  }
-
-  lot.appendChild(d);
-
-  const updateRod = ()=>{
-    Object.assign(d.style, {
-      left: r.x * scale + "px",
-      top:  r.y * scale + "px",
-      width: r.width * scale + "px",
-      height:r.height* scale + "px",
-      transform:`rotate(${r.angle}deg)`
-    });
-
-    // 選択中の枠は常に反映
+    // 選択中なら黄色枠
     d.style.outline = r.selected ? "3px solid yellow" : "";
-  };
-  updateRod();
 
-  // 以下、既存のダブルクリック、ドラッグ、右クリック処理は変更なし
+    lot.appendChild(d);
 
-// ===== ダブルクリックで満／空を切り替え =====
-   d.ondblclick = e => {
-     e.stopPropagation();
-     r.status = (r.status === 0) ? 1 : 0; // 0:空 ⇄ 1:満
-     render();
-   };
+    const updateRod = ()=>{
+      Object.assign(d.style, {
+        left: r.x * scale + "px",
+        top:  r.y * scale + "px",
+        width: r.width * scale + "px",
+        height:r.height* scale + "px",
+        transform:`rotate(${r.angle}deg)`
+      });
+      d.style.outline = r.selected ? "3px solid yellow" : "";
+    };
+    updateRod();
 
-   d.onclick = e=>{
-  e.stopPropagation();
-  if(e.shiftKey && r.groupId){  // Shift押しながらクリック
-    rods.forEach(x => x.selected = x.groupId === r.groupId);
-  }else{
-    rods.forEach(x => x.selected = false); // 全て非選択
-    r.selected = true; // このロッドだけ選択
-  }
-  render(); // 選択状態を描画に反映
-};
+    // ダブルクリックで満／空切り替え
+    d.ondblclick = e => {
+      e.stopPropagation();
+      r.status = (r.status === 0) ? 1 : 0;
+      render();
+    };
 
+    // クリックで選択（グループ単位対応）
+    d.onclick = e => {
+      e.stopPropagation();
+      if(r.groupId){
+        if(e.shiftKey){
+          // Shift + クリックでグループ追加選択
+          rods.filter(x=>x.groupId===r.groupId).forEach(x=>x.selected=true);
+        } else {
+          // 単体クリックでもグループ全体選択
+          rods.forEach(x=>x.selected=false);
+          rods.filter(x=>x.groupId===r.groupId).forEach(x=>x.selected=true);
+        }
+      } else {
+        rods.forEach(x=>x.selected=false);
+        r.selected = true;
+      }
+      render();
+    };
 
+    // 右クリックで回転
     d.oncontextmenu = e=>{
       e.preventDefault();
       r.angle = (r.angle+90)%360;
       updateRod();
+    };
+
+    // ドラッグで移動（グループ対応）
+    d.onmousedown = e => {
+      e.preventDefault();
+      const targets = r.selected ? rods.filter(x=>x.selected) : [r];
+      const sx = e.clientX, sy = e.clientY;
+      const orig = targets.map(t=>({x:t.x, y:t.y}));
+
+      const move = ev => {
+        const dx = (ev.clientX - sx)/scale;
+        const dy = (ev.clientY - sy)/scale;
+        targets.forEach((t,i)=>{
+          t.x = orig[i].x + dx;
+          t.y = orig[i].y + dy;
+        });
+        render();
+      };
+      const up = ()=>{
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
     };
   });
 
@@ -214,7 +240,7 @@ rods.forEach(r => {
   });
 }
 
-// ===== イベント =====
+// ===== 以下イベント類は変更なし =====
 document.getElementById("set-parking").onclick = ()=>{
   parking.lat1 = +lat1.value;
   parking.lng1 = +lng1.value;
@@ -264,7 +290,7 @@ calcParkingSize();
 setAerialBackground();
 render();
 
-// ===== グリッド生成 =====
+// ===== グリッド生成は変更なし =====
 document.getElementById("generate-grid").onclick = () => {
   const startX = +document.getElementById("grid-start-x").value;
   const startY = +document.getElementById("grid-start-y").value;
@@ -274,7 +300,7 @@ document.getElementById("generate-grid").onclick = () => {
   const gapY   = +document.getElementById("grid-gap-y").value;
   const angle  = +document.getElementById("grid-angle").value;
 
-  const groupId = "G" + Date.now(); // 新規グループID
+  const groupId = "G" + Date.now();
   let count = rods.length + 1;
 
   for (let r = 0; r < rows; r++) {
@@ -296,7 +322,7 @@ document.getElementById("generate-grid").onclick = () => {
   render();
 };
 
-// ===== グループ中心計算（回転の支点用） =====
+// ===== グループ回転関連も変更なし =====
 function getGroupCenter(groupId){
   const g = rods.filter(r => r.groupId === groupId);
   if(g.length === 0) return {cx:0, cy:0};
@@ -305,7 +331,6 @@ function getGroupCenter(groupId){
   return {cx, cy};
 }
 
-// ===== グループ回転 =====
 function rotateGroup(groupId, deltaDeg){
   const {cx, cy} = getGroupCenter(groupId);
   const rad = deltaDeg * Math.PI / 180;
@@ -320,37 +345,6 @@ function rotateGroup(groupId, deltaDeg){
   render();
 }
 
-// ===== ロッド描画時にドラッグでグループ移動 =====
-rods.forEach(r => {
-  const d = document.createElement("div");
-  // ...既存描画処理...
-
-  d.onmousedown = e => {
-    e.preventDefault();
-    // 選択済みのグループを対象に移動
-    const targets = r.selected ? rods.filter(x=>x.selected && x.groupId===r.groupId) : [r];
-    const sx = e.clientX, sy = e.clientY;
-    const orig = targets.map(t=>({x:t.x, y:t.y}));
-
-    const move = ev => {
-      const dx = (ev.clientX - sx) / scale;
-      const dy = (ev.clientY - sy) / scale;
-      targets.forEach((t,i)=>{
-        t.x = orig[i].x + dx;
-        t.y = orig[i].y + dy;
-      });
-      render();
-    };
-    const up = ()=>{
-      document.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseup", up);
-    };
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", up);
-  };
-});
-
-// ===== Alt+ホイールで選択グループ回転 =====
 lot.addEventListener("wheel", e=>{
   if(!e.altKey) return;
   const target = rods.find(r=>r.selected && r.groupId);
