@@ -38,8 +38,8 @@ def static_files(filename):
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
-    if not data or "parking" not in data:
-        return jsonify({"status":"error","message":"Invalid data"}), 400
+    if not data:
+        return jsonify({"status":"error","message":"No data received"}), 400
 
     try:
         # 既存の全駐車場読み込み

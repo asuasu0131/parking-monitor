@@ -12,7 +12,12 @@ const ROD_HEIGHT_M = 5.0;
 const GRID_M = 5;
 
 // ===== 駐車場情報 =====
-let parking = { lat1:38.16686, lng1:140.86395, lat2:38.16616, lng2:140.86528, width:0, height:0 };
+let parking = {
+  id: "P1",
+  lat1: 38.16686, lng1: 140.86395,
+  lat2: 38.16616, lng2: 140.86528,
+  width: 0, height: 0
+};
 let rods = [];
 let nodes = [];
 let links = [];
