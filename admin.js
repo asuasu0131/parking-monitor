@@ -167,41 +167,63 @@ function render() {
     };
   });
 
-  // ---- ノード ----
-  nodes.forEach(n=>{
-    const d = document.createElement("div");
-    d.className = "node";
-    d.textContent = n.id;
-    d.style.zIndex = 3;
-    lot.appendChild(d);
+// ---- ノード ----
+nodes.forEach(n=>{
+  const d = document.createElement("div");
+  d.className = "node";
+  d.textContent = n.id;
+  d.style.zIndex = 3;
+  lot.appendChild(d);
 
-    const updateNode = ()=>{
-      const size = n.radius*2*scale;
-      Object.assign(d.style,{
-        left: (n.x*scale - size/2)+"px",
-        top:  (n.y*scale - size/2)+"px",
-        width:size+"px",
-        height:size+"px"
-      });
-    };
-    updateNode();
+  const updateNode = ()=>{
+    const size = n.radius*2*scale;
+    Object.assign(d.style,{
+      left: (n.x*scale - size/2)+"px",
+      top:  (n.y*scale - size/2)+"px",
+      width:size+"px",
+      height:size+"px"
+    });
+  };
+  updateNode();
 
-    d.onclick = e=>{
-      if(e.shiftKey){
-        if(!selectedNodeForLink){
-          selectedNodeForLink = n;
-          d.style.border="2px dashed yellow";
-        }else if(selectedNodeForLink!==n){
-          const a = selectedNodeForLink, b = n;
-          if(!a.neighbors.includes(b.id)) a.neighbors.push(b.id);
-          if(!b.neighbors.includes(a.id)) b.neighbors.push(a.id);
-          links.push({from:a.id,to:b.id});
-          selectedNodeForLink = null;
-        }
-        render();
+  d.onclick = e=>{
+    if(e.shiftKey){
+      if(!selectedNodeForLink){
+        selectedNodeForLink = n;
+        d.style.border="2px dashed yellow";
+      }else if(selectedNodeForLink!==n){
+        const a = selectedNodeForLink, b = n;
+        if(!a.neighbors.includes(b.id)) a.neighbors.push(b.id);
+        if(!b.neighbors.includes(a.id)) b.neighbors.push(a.id);
+        links.push({from:a.id,to:b.id});
+        selectedNodeForLink = null;
       }
+      render();
+    }
+  };
+
+  // ===== ここからドラッグ処理追加 =====
+  d.onmousedown = e => {
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    const origX = n.x, origY = n.y;
+
+    const move = ev => {
+      const dx = (ev.clientX - sx) / scale;
+      const dy = (ev.clientY - sy) / scale;
+      n.x = origX + dx;
+      n.y = origY + dy;
+      render();
     };
-  });
+    const up = ()=>{
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
+  // ===== ドラッグ処理ここまで =====
+});
 
   // ---- 線 ----
   links.forEach((link,index)=>{
