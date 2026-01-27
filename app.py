@@ -35,6 +35,7 @@ def static_files(filename):
     return "Not Found", 404
 
 # ===== JSON 保存 =====
+# ===== JSON 保存 =====
 @app.route("/save_layout", methods=["POST"])
 def save_layout():
     data = request.get_json()
@@ -42,18 +43,18 @@ def save_layout():
         return jsonify({"status":"error","message":"No data received"}), 400
 
     try:
-        # 既存の全駐車場読み込み
         with open(LAYOUT_FILE, "r", encoding="utf-8") as f:
             all_layouts = json.load(f)
 
-        # 今回送信された駐車場ID
-        parking_id = data.get("parking", {}).get("id") or data.get("id") or f"P{len(all_layouts)+1}"
+        parking_id = data.get("parking", {}).get("id") or f"P{len(all_layouts)+1}"
         all_layouts[parking_id] = data
 
         with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
             json.dump(all_layouts, f, ensure_ascii=False, indent=2)
 
-        socketio.emit("layout_updated")  # 仮想画面へ通知
+        # ここで即時反映用にデータを送信
+        socketio.emit("layout_updated", data)
+
         return jsonify({"status":"ok","parking_id":parking_id})
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}), 500

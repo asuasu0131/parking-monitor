@@ -99,11 +99,20 @@ async function loadLayout() {
   renderAll();
 }
 
-socket.on("sensor_update", data => {
-  rods.forEach(r => {
-    if (r.id === "R1") r.status = data.R1;
-    if (r.id === "R2") r.status = data.R2;
-  });
+// 管理者がレイアウト更新したとき
+socket.on("layout_updated", (data) => {
+  console.log("管理者レイアウト更新を受信");
+
+  if (data.parking) parking = data.parking;
+  if (data.rods) rods = data.rods;
+  if (data.nodes) nodes = data.nodes;
+  if (data.links) links = data.links;
+
+  // ユーザ座標を更新（必要に応じて）
+  user.x = Math.min(user.x, parking.width);
+  user.y = Math.min(user.y, parking.height);
+
+  setAerialBackground();
   renderAll();
 });
 
