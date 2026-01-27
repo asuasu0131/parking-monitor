@@ -197,7 +197,7 @@ function renderAll() {
       width: (r.width||2.5)*scale+"px",
       height: (r.height||5)*scale+"px",
       transform:`rotate(${r.angle||0}deg)`,
-      background: r.status===0 ? "#8bc34a" : "#9e9e9e",
+      background: r.status===0 ? "#88ff00ff" : "#ff0000ff",
       zIndex:1,
       cursor:"pointer"
     });
