@@ -133,18 +133,6 @@ rods.forEach(r => {
   render(); // 選択状態を描画に反映
 };
 
-    d.onmousedown = e=>{
-      e.preventDefault();
-      const sx=e.clientX, sy=e.clientY, ox=r.x, oy=r.y;
-      const move = ev=>{
-        r.x = ox + (ev.clientX - sx)/scale;
-        r.y = oy + (ev.clientY - sy)/scale;
-        updateRod();
-      };
-      const up = ()=>{ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); };
-      document.addEventListener("mousemove",move);
-      document.addEventListener("mouseup",up);
-    };
 
     d.oncontextmenu = e=>{
       e.preventDefault();
@@ -186,23 +174,6 @@ rods.forEach(r => {
         }
         render();
       }
-    };
-
-    d.onmousedown = e=>{
-      e.preventDefault();
-      const sx=e.clientX, sy=e.clientY, ox=n.x, oy=n.y;
-      const move = ev=>{
-        n.x = ox + (ev.clientX - sx)/scale;
-        n.y = oy + (ev.clientY - sy)/scale;
-        updateNode();
-        render();
-      };
-      const up = ()=>{
-        document.removeEventListener("mousemove",move);
-        document.removeEventListener("mouseup",up);
-      };
-      document.addEventListener("mousemove",move);
-      document.addEventListener("mouseup",up);
     };
   });
 
