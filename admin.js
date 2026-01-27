@@ -271,6 +271,7 @@ calcParkingSize();
 setAerialBackground();
 render();
 
+// ===== グリッド生成 =====
 document.getElementById("generate-grid").onclick = () => {
   const startX = +document.getElementById("grid-start-x").value;
   const startY = +document.getElementById("grid-start-y").value;
@@ -280,34 +281,9 @@ document.getElementById("generate-grid").onclick = () => {
   const gapY   = +document.getElementById("grid-gap-y").value;
   const angle  = +document.getElementById("grid-angle").value;
 
-document.getElementById("generate-grid").onclick = () => {
-  const startX = +document.getElementById("grid-start-x").value;
-  const startY = +document.getElementById("grid-start-y").value;
-  const cols   = +document.getElementById("grid-cols").value;
-  const rows   = +document.getElementById("grid-rows").value;
-  const gapX   = +document.getElementById("grid-gap-x").value;
-  const gapY   = +document.getElementById("grid-gap-y").value;
-  const angle  = +document.getElementById("grid-angle").value;
+  const groupId = "G" + Date.now(); // 新規グループID
+  let count = rods.length + 1;
 
-  let selectedRods = rods.filter(r => r.selected); // 選択フラグをつける
-  if(selectedRods.length === 0) selectedRods = rods; // 選択なしなら全て
-
-  let count = 1;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const rod = selectedRods.shift();
-      if(!rod) break;
-      rod.x = startX + c * gapX;
-      rod.y = startY + r * gapY;
-      rod.angle = angle;
-      rod.id = "R" + count++; // 必要ならID更新
-    }
-  }
-
-  render();
-};
-
-  let count = 1;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       rods.push({
@@ -317,10 +293,76 @@ document.getElementById("generate-grid").onclick = () => {
         width: ROD_WIDTH_M,
         height: ROD_HEIGHT_M,
         angle: angle,
-        status: 0
+        status: 0,
+        groupId: groupId,
+        selected: false
       });
     }
   }
 
   render();
 };
+
+// ===== グループ中心計算（回転の支点用） =====
+function getGroupCenter(groupId){
+  const g = rods.filter(r => r.groupId === groupId);
+  if(g.length === 0) return {cx:0, cy:0};
+  const cx = g.reduce((sum,r)=>sum+r.x,0)/g.length;
+  const cy = g.reduce((sum,r)=>sum+r.y,0)/g.length;
+  return {cx, cy};
+}
+
+// ===== グループ回転 =====
+function rotateGroup(groupId, deltaDeg){
+  const {cx, cy} = getGroupCenter(groupId);
+  const rad = deltaDeg * Math.PI / 180;
+  rods.forEach(r=>{
+    if(r.groupId !== groupId) return;
+    const dx = r.x - cx;
+    const dy = r.y - cy;
+    r.x = cx + dx*Math.cos(rad) - dy*Math.sin(rad);
+    r.y = cy + dx*Math.sin(rad) + dy*Math.cos(rad);
+    r.angle = (r.angle || 0) + deltaDeg;
+  });
+  render();
+}
+
+// ===== ロッド描画時にドラッグでグループ移動 =====
+rods.forEach(r => {
+  const d = document.createElement("div");
+  // ...既存描画処理...
+
+  d.onmousedown = e => {
+    e.preventDefault();
+    // 選択済みのグループを対象に移動
+    const targets = r.selected ? rods.filter(x=>x.selected && x.groupId===r.groupId) : [r];
+    const sx = e.clientX, sy = e.clientY;
+    const orig = targets.map(t=>({x:t.x, y:t.y}));
+
+    const move = ev => {
+      const dx = (ev.clientX - sx) / scale;
+      const dy = (ev.clientY - sy) / scale;
+      targets.forEach((t,i)=>{
+        t.x = orig[i].x + dx;
+        t.y = orig[i].y + dy;
+      });
+      render();
+    };
+    const up = ()=>{
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  };
+});
+
+// ===== Alt+ホイールで選択グループ回転 =====
+lot.addEventListener("wheel", e=>{
+  if(!e.altKey) return;
+  const target = rods.find(r=>r.selected && r.groupId);
+  if(!target) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 5 : -5;
+  rotateGroup(target.groupId, delta);
+},{ passive:false });
