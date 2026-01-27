@@ -169,20 +169,39 @@ function render() {
 
   // ---- ノード & 線 ----
   nodes.forEach(n=>{
-    const d=document.createElement("div");
-    d.className="node";
-    d.textContent=n.id;
-    d.style.zIndex=3;
-    lot.appendChild(d);
+  const d=document.createElement("div");
+  d.className="node";
+  d.textContent=n.id;
+  d.style.zIndex=3;
+  lot.appendChild(d);
 
-    const size=n.radius*2*scale;
-    Object.assign(d.style,{
-      left:(n.x*scale-size/2)+"px",
-      top:(n.y*scale-size/2)+"px",
-      width:size+"px",
-      height:size+"px"
-    });
+  const size = (n.radius || 1) * 2 * scale;  // radius未設定時も1にする
+
+  Object.assign(d.style,{
+    position: "absolute",           // ←絶対配置必須
+    left: (n.x*scale - size/2) + "px",
+    top:  (n.y*scale - size/2) + "px",
+    width: size + "px",
+    height: size + "px",
+    background: "#ff5722",          // ←目立つ色
+    border: "2px solid #000",       // ←輪郭
+    borderRadius: "50%",            // ←丸にする
+    display: "flex",                // ←ID文字中央配置
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontSize: Math.max(10*scale,8)+"px",
+    boxSizing: "border-box",
+    cursor: "pointer"
   });
+
+  // ノードクリックで選択
+  d.onclick = e=>{
+    e.stopPropagation();
+    selectedNodeForLink = n;
+    render();
+  };
+});
 
   links.forEach((l,i)=>{
     const a=nodes.find(x=>x.id===l.from);
