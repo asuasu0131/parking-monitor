@@ -188,7 +188,7 @@ function renderAll() {
       width: (r.width||2.5)*scale+"px",
       height: (r.height||5)*scale+"px",
       transform:`rotate(${r.angle||0}deg)`,
-      background: r.status===0 ? "#88ff00ff" : "#ff0000ff",
+      background: r.status===0 ? "#8bc34a" : "#9e9e9e",
       zIndex:1,
       cursor:"pointer"
     });
@@ -255,7 +255,7 @@ function renderAll() {
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
       pathEl.setAttribute("d",d);
       pathEl.setAttribute("stroke","#005aa4ff");
-      pathEl.setAttribute("stroke-width","8");
+      pathEl.setAttribute("stroke-width","11");
       pathEl.setAttribute("fill","none");
       pathEl.setAttribute("stroke-linecap","round");
       pathEl.setAttribute("stroke-linejoin","round");
