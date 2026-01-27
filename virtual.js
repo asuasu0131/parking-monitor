@@ -4,7 +4,7 @@ const zoomSlider = document.getElementById("zoom-slider");
 
 let rods = [], nodes = [], links = [];
 let zoomScale = 1;
-let parking = { width: 200, height: 100 };
+let parking = {};
 let user = { x: parking.width - 15, y: 15 };
 let selectedRod = null;
 
@@ -28,7 +28,7 @@ function setAerialBackground() {
     width: parking.width * scale + "px",
     height: parking.height * scale + "px",
     pointerEvents: "none",
-    zIndex: -1,
+    zIndex: 0,
     objectFit: "cover"
   });
   lot.insertBefore(aerialImg, lot.firstChild);
@@ -189,7 +189,7 @@ function renderAll() {
       height: (r.height||5)*scale+"px",
       transform:`rotate(${r.angle||0}deg)`,
       background: r.status===0 ? "#8bc34a" : "#9e9e9e",
-      zIndex:1,
+      zIndex:2,
       cursor:"pointer"
     });
 
