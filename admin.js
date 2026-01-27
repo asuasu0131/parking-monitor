@@ -266,6 +266,12 @@ document.getElementById("rotate-right")?.addEventListener("click", ()=>{
   if(t) rotateGroup(t.groupId,10);
 });
 
+zoomSlider.oninput = ()=>{
+  zoomScale = parseFloat(zoomSlider.value);
+  if(aerialImg) aerialImg.style.transform = `scale(${zoomScale})`;
+  lot.style.transform = `scale(${zoomScale})`;
+};
+
 // ===== 初期化 =====
 calcParkingSize();
 setAerialBackground();
