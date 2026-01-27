@@ -254,7 +254,7 @@ function renderAll() {
       for(let i=1;i<path.length;i++) d+=` L ${path[i].x*scale} ${path[i].y*scale}`;
       const pathEl = document.createElementNS("http://www.w3.org/2000/svg","path");
       pathEl.setAttribute("d",d);
-      pathEl.setAttribute("stroke","#1602fcff");
+      pathEl.setAttribute("stroke","#ffe600ff");
       pathEl.setAttribute("stroke-width","9");
       pathEl.setAttribute("fill","none");
       pathEl.setAttribute("stroke-linecap","round");
