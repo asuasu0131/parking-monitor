@@ -1,3 +1,4 @@
+// ===== admin.js 完全版 =====
 const container = document.getElementById("parking-lot-container");
 const lot = document.getElementById("parking-lot");
 const zoomSlider = document.getElementById("zoom-slider");
@@ -217,13 +218,13 @@ document.getElementById("delete-group").onclick = ()=>{
 
 // ===== グリッド生成 =====
 document.getElementById("generate-grid").onclick = ()=>{
-  const startX=+grid-start-x.value;
-  const startY=+grid-start-y.value;
-  const cols=+grid-cols.value;
-  const rows=+grid-rows.value;
-  const gapX=+grid-gap-x.value;
-  const gapY=+grid-gap-y.value;
-  const angle=+grid-angle.value;
+  const startX = +document.getElementById("grid-start-x").value;
+  const startY = +document.getElementById("grid-start-y").value;
+  const cols   = +document.getElementById("grid-cols").value;
+  const rows   = +document.getElementById("grid-rows").value;
+  const gapX   = +document.getElementById("grid-gap-x").value;
+  const gapY   = +document.getElementById("grid-gap-y").value;
+  const angle  = +document.getElementById("grid-angle").value;
 
   const groupId="G"+Date.now();
   let count=rods.length+1;
@@ -256,7 +257,7 @@ lot.addEventListener("wheel", e=>{
   rotateGroup(target.groupId, delta);
 },{ passive:false });
 
-// ===== UIボタン回転（任意） =====
+// ===== UIボタン回転 =====
 document.getElementById("rotate-left")?.addEventListener("click", ()=>{
   const t = rods.find(r=>r.selected && r.groupId);
   if(t) rotateGroup(t.groupId,-10);
@@ -266,13 +267,60 @@ document.getElementById("rotate-right")?.addEventListener("click", ()=>{
   if(t) rotateGroup(t.groupId,10);
 });
 
+// ===== ズーム =====
 zoomSlider.oninput = ()=>{
   zoomScale = parseFloat(zoomSlider.value);
   if(aerialImg) aerialImg.style.transform = `scale(${zoomScale})`;
   lot.style.transform = `scale(${zoomScale})`;
 };
 
-// ===== 初期化 =====
-calcParkingSize();
-setAerialBackground();
-render();
+// ===== 保存 =====
+document.getElementById("save-layout").onclick = async ()=>{
+  try {
+    const layout = { parking, rods, nodes, links };
+    const res = await fetch("/save_layout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(layout)
+    });
+    const data = await res.json();
+    if(data.status==="ok") alert("保存しました: ID="+data.parking_id);
+    else alert("保存失敗: "+data.message);
+  } catch(e){
+    alert("保存エラー: "+e.message);
+  }
+};
+
+// ===== 駐車場設定ボタン =====
+document.getElementById("set-parking").onclick = ()=>{
+  parking.lat1 = parseFloat(document.getElementById("lat1").value);
+  parking.lng1 = parseFloat(document.getElementById("lng1").value);
+  parking.lat2 = parseFloat(document.getElementById("lat2").value);
+  parking.lng2 = parseFloat(document.getElementById("lng2").value);
+  calcParkingSize();
+  setAerialBackground();
+  render();
+};
+
+// ===== 初期ロード =====
+async function loadLayout(){
+  try {
+    const res = await fetch("/get_layouts");
+    const data = await res.json();
+    const firstId = Object.keys(data)[0];
+    if(firstId){
+      const layout = data[firstId];
+      if(layout.parking) parking = layout.parking;
+      if(layout.rods) rods = layout.rods;
+      if(layout.nodes) nodes = layout.nodes;
+      if(layout.links) links = layout.links;
+    }
+  } catch(e){
+    console.warn("初期レイアウト読み込み失敗:", e);
+  }
+  calcParkingSize();
+  setAerialBackground();
+  render();
+}
+
+loadLayout();
