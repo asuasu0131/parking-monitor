@@ -19,7 +19,7 @@ function setAerialBackground() {
 
   const scale = Math.min(container.clientWidth / parking.width, container.clientHeight / parking.height);
   aerialImg = document.createElement("img");
-  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
+  //aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
   aerialImg.alt = "Parking Background";
   Object.assign(aerialImg.style, {
     position: "absolute",
