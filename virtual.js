@@ -302,6 +302,27 @@ zoomSlider.addEventListener("input", () => {
   zoomScale = parseFloat(zoomSlider.value);
   updateTransform();
 });
+/* ===============================
+   マウスホイールでズーム（PC向け）
+================================ */
+container.addEventListener("wheel", e => {
+  e.preventDefault();
+
+  const scaleAmount = -e.deltaY * 0.001; // ホイール感度
+  const prevZoom = zoomScale;
+  zoomScale *= (1 + scaleAmount);
+  zoomScale = Math.max(0.1, Math.min(zoomScale, 5));
+
+  // ズーム中心をマウス位置に固定
+  const rect = container.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  panX -= (mx / prevZoom) * (zoomScale - prevZoom);
+  panY -= (my / prevZoom) * (zoomScale - prevZoom);
+
+  updateTransform();
+}, { passive: false });
 
 /* ===============================
    パン（ドラッグ移動）

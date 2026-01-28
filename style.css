@@ -1,35 +1,44 @@
-body {
+html, body {
   font-family: sans-serif;
   background: #cfcfcf;
-  padding: 8px;
+  padding: 0;       /* 画面全体使用のため余白削除 */
   margin: 0;
-  text-align: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* ページスクロール禁止 */
 }
+
 h1 {
   font-size: clamp(18px,4vw,26px);
   margin: 6px 0;
 }
+
+/* ズームスライダーは不要なら削除可 */
 #zoom-slider {
-  width: 80%;
-  margin: 6px auto;
+  display: none; /* 非表示にして完全に画面操作に */
 }
+
 #parking-lot-container {
-  position: relative;
-  width: 100%;
-  max-width: 900px;
-  aspect-ratio: 9/6.5;
-  margin: auto;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #FFF8E1;
-  cursor: crosshair;
-}
-#parking-lot {
-  position: relative; /* ←重要 */
+  position: fixed;  /* 画面全体固定 */
+  inset: 0;         /* top:0; right:0; bottom:0; left:0 */
   width: 100%;
   height: 100%;
-  transform-origin: center center;
+  overflow: hidden;
+  background: #FFF8E1;
+  cursor: grab;      /* Google Maps風のパンカーソル */
+  touch-action: none; /* タッチイベントがブラウザに奪われない */
+  z-index: 0;
 }
+
+#parking-lot {
+  position: absolute; /* 画面全体スケーリング用 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0; /* 左上基準でズーム */
+}
+
 .rod {
   position: absolute;
   display: flex;
@@ -38,13 +47,14 @@ h1 {
   color: white;
   font-weight: bold;
   border: 1px solid white;
-  cursor: move;
+  cursor: pointer;      /* 移動よりクリック操作中心 */
   user-select: none;
   transform-origin: center center;
   z-index: 2;
 }
-.empty { background: #4caf50; }
-.full  { background: #ff8a80; }
+
+.empty { background: #00ff08; }
+.full  { background: #ff1500; }
 
 #user-marker {
   position: absolute;
@@ -53,7 +63,7 @@ h1 {
   background: #2196f3;
   border-radius: 50%;
   border: 2px solid white;
-  z-index: 3; /* 背景より前面 */
+  z-index: 3;
   transform-origin: center center;
 }
 
@@ -68,6 +78,7 @@ h1 {
   transform-origin: bottom center;
   transform: translate(-50%,-100%) rotate(0deg);
 }
+
 #heading-arrow::after {
   content: "";
   position: absolute;
