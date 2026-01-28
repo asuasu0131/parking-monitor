@@ -11,7 +11,7 @@ const ROD_HEIGHT_M = 5.0;
 const GRID_M = 5;
 
 // ===== 駐車場情報 =====
-let parking = { lat1:38.16686, lng1:140.86395, lat2:38.16616, lng2:140.86528, width:0, height:0 };
+let parking = { lat1:38.163539, lng1:140.893509, lat2:38.162075, lng2:140.898170, width:0, height:0 };
 let rods = [];
 let nodes = [];
 let links = [];
@@ -35,7 +35,7 @@ function setAerialBackground() {
   if (aerialImg) aerialImg.remove();
 
   aerialImg = document.createElement("img");
-  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/parking_bg.png?raw=true";
+  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/AEON.png?raw=true";
   aerialImg.alt = "Parking Background";
   Object.assign(aerialImg.style, {
     position: "absolute",
@@ -51,8 +51,8 @@ function setAerialBackground() {
 }
 
 if(rods.length === 0){
-  rods.push({id:"R1", x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
-  rods.push({id:"R2", x:parking.width/2, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
+  rods.push({id:"R1", x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:1, angle:0});
+  rods.push({id:"R2", x:parking.width/2, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:1, angle:0});
 }
 
 // ===== 描画 =====
@@ -274,7 +274,7 @@ document.getElementById("set-parking").onclick = ()=>{
 };
 
 document.getElementById("add-rod").onclick = ()=>{
-  rods.push({id:"R"+(rods.length+1), x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:0, angle:0});
+  rods.push({id:"R"+(rods.length+1), x:parking.width/4, y:parking.height/4, width:ROD_WIDTH_M, height:ROD_HEIGHT_M, status:1, angle:0});
   render();
 };
 
@@ -334,7 +334,7 @@ document.getElementById("generate-grid").onclick = () => {
         width: ROD_WIDTH_M,
         height: ROD_HEIGHT_M,
         angle: angle,
-        status: 0,
+        status: 1,
         groupId: groupId,
         selected: false
       });
