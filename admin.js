@@ -11,7 +11,7 @@ const ROD_HEIGHT_M = 5.0;
 const GRID_M = 5;
 
 // ===== 駐車場情報 =====
-let parking = { lat1:38.163539, lng1:140.893509, lat2:38.162075, lng2:140.898170, width:0, height:0 };
+let parking = { lat1:38.16688, lng1:140.86138, lat2:38.16575, lng2:140.86305, width:0, height:0 };
 let rods = [];
 let nodes = [];
 let links = [];
@@ -35,7 +35,7 @@ function setAerialBackground() {
   if (aerialImg) aerialImg.remove();
 
   aerialImg = document.createElement("img");
-  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/AEON.png?raw=true";
+  aerialImg.src = "https://github.com/asuasu0131/parking-monitor/blob/main/center.png?raw=true";
   aerialImg.alt = "Parking Background";
   Object.assign(aerialImg.style, {
     position: "absolute",
