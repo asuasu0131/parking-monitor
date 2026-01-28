@@ -4,7 +4,7 @@ const zoomSlider = document.getElementById("zoom-slider");
 
 let rods = [], nodes = [], links = [];
 let parking = { width: 200, height: 100 };
-let user = { x: parking.width - 15, y: 15 };
+let user = { x: 15, y: 15 };
 let selectedRod = null;
 
 const socket = io();
@@ -308,18 +308,18 @@ zoomSlider.addEventListener("input", () => {
 container.addEventListener("wheel", e => {
   e.preventDefault();
 
-  const scaleAmount = -e.deltaY * 0.001; // ホイール感度
-  const prevZoom = zoomScale;
-  zoomScale *= (1 + scaleAmount);
-  zoomScale = Math.max(0.1, Math.min(zoomScale, 5));
-
-  // ズーム中心をマウス位置に固定
   const rect = container.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
 
-  panX -= (mx / prevZoom) * (zoomScale - prevZoom);
-  panY -= (my / prevZoom) * (zoomScale - prevZoom);
+  const scaleAmount = -e.deltaY * 0.001; // ホイール感度
+  const prevZoom = zoomScale;
+  const newZoom = zoomScale * (1 + scaleAmount);
+  zoomScale = Math.max(0.1, Math.min(newZoom, 5));
+
+  // ズーム中心をマウス位置に固定
+  panX -= (mx - panX) * (zoomScale / prevZoom - 1);
+  panY -= (my - panY) * (zoomScale / prevZoom - 1);
 
   updateTransform();
 }, { passive: false });
@@ -386,16 +386,29 @@ container.addEventListener(
       panY = e.touches[0].clientY - panStart.y;
       updateTransform();
     } else if (e.touches.length === 2 && initialPinchDistance) {
-      // 2本指 → ピンチズーム
-      e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const currentDistance = Math.hypot(dx, dy);
-      const scaleChange = currentDistance / initialPinchDistance;
-      zoomScale = initialZoomScale * scaleChange;
-      zoomScale = Math.max(0.1, Math.min(zoomScale, 5)); // 任意の制限
-      updateTransform();
-    }
+        e.preventDefault();
+
+        // 現在のピンチ距離
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const currentDistance = Math.hypot(dx, dy);
+
+        // ズーム倍率
+        const scaleChange = currentDistance / initialPinchDistance;
+        const newZoom = initialZoomScale * scaleChange;
+
+        // 指2本の中心
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        // 左上原点基準でのズーム中心に合わせたpan補正
+        panX -= (centerX - panX) * (newZoom / zoomScale - 1);
+        panY -= (centerY - panY) * (newZoom / zoomScale - 1);
+
+        // ズーム更新
+        zoomScale = Math.max(0.1, Math.min(newZoom, 5));
+        updateTransform();
+}
   },
   { passive: false }
 );
