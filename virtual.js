@@ -307,6 +307,7 @@ zoomSlider.addEventListener("input", () => {
    パン（ドラッグ移動）
 ================================ */
 container.addEventListener("mousedown", e => {
+  e.preventDefault(); // ★追加
   isPanning = true;
   panStart.x = e.clientX - panX;
   panStart.y = e.clientY - panY;
@@ -315,6 +316,7 @@ container.addEventListener("mousedown", e => {
 
 document.addEventListener("mousemove", e => {
   if (!isPanning) return;
+  e.preventDefault(); // ★追加
   panX = e.clientX - panStart.x;
   panY = e.clientY - panStart.y;
   updateTransform();
@@ -326,24 +328,60 @@ document.addEventListener("mouseup", () => {
 });
 
 /* ===============================
-   タッチ対応（スマホ）
+   タッチ対応（スマホ）＋ピンチズーム
 ================================ */
-container.addEventListener("touchstart", e => {
-  if (e.touches.length !== 1) return;
-  isPanning = true;
-  panStart.x = e.touches[0].clientX - panX;
-  panStart.y = e.touches[0].clientY - panY;
-});
+let initialPinchDistance = null;
+let initialZoomScale = zoomScale;
 
-container.addEventListener("touchmove", e => {
-  if (!isPanning) return;
-  panX = e.touches[0].clientX - panStart.x;
-  panY = e.touches[0].clientY - panStart.y;
-  updateTransform();
-});
+container.addEventListener(
+  "touchstart",
+  e => {
+    if (e.touches.length === 1) {
+      // 1本指 → パン
+      e.preventDefault();
+      isPanning = true;
+      panStart.x = e.touches[0].clientX - panX;
+      panStart.y = e.touches[0].clientY - panY;
+    } else if (e.touches.length === 2) {
+      // 2本指 → ピンチズーム
+      e.preventDefault();
+      isPanning = false; // パンは無効化
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialPinchDistance = Math.hypot(dx, dy);
+      initialZoomScale = zoomScale;
+    }
+  },
+  { passive: false }
+);
 
-container.addEventListener("touchend", () => {
-  isPanning = false;
+container.addEventListener(
+  "touchmove",
+  e => {
+    if (e.touches.length === 1 && isPanning) {
+      // 1本指 → パン
+      e.preventDefault();
+      panX = e.touches[0].clientX - panStart.x;
+      panY = e.touches[0].clientY - panStart.y;
+      updateTransform();
+    } else if (e.touches.length === 2 && initialPinchDistance) {
+      // 2本指 → ピンチズーム
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const currentDistance = Math.hypot(dx, dy);
+      const scaleChange = currentDistance / initialPinchDistance;
+      zoomScale = initialZoomScale * scaleChange;
+      zoomScale = Math.max(0.1, Math.min(zoomScale, 5)); // 任意の制限
+      updateTransform();
+    }
+  },
+  { passive: false }
+);
+
+container.addEventListener("touchend", e => {
+  if (e.touches.length < 2) initialPinchDistance = null;
+  if (e.touches.length === 0) isPanning = false;
 });
 
 /* ===============================
